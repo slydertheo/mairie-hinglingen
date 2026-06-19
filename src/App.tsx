@@ -1,0 +1,58 @@
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import MainLayout from './layouts/MainLayout';
+import MainLayoutV2 from './layouts/MainLayoutV2';
+import Home from './pages/Home';
+import HomeV2 from './pages/HomeV2';
+import Commune from './pages/Commune';
+import VieMunicipale from './pages/VieMunicipale';
+import DemarchesAdmin from './pages/DemarchesAdmin';
+import VieLocale from './pages/VieLocale';
+import Intercommunalite from './pages/Intercommunalite';
+import Actualites from './pages/Actualites';
+import Evenements from './pages/Evenements';
+import Contact from './pages/Contact';
+import CommuneV2 from './pages/v2/CommuneV2';
+import VieMunicipaleV2 from './pages/v2/VieMunicipaleV2';
+import DemarchesV2 from './pages/v2/DemarchesV2';
+import VieLocaleV2 from './pages/v2/VieLocaleV2';
+import IntercommunaliteV2 from './pages/v2/IntercommunaliteV2';
+import ActualitesV2 from './pages/v2/ActualitesV2';
+import AgendaV2 from './pages/v2/AgendaV2';
+import ContactV2 from './pages/v2/ContactV2';
+import BrochureEditor from './pages/BrochureEditor';
+
+function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        {/* Maquette 1 – Moderne */}
+        <Route element={<MainLayout />}>
+          <Route path="/" element={<Home />} />
+          <Route path="/brochure" element={<BrochureEditor />} />
+          <Route path="/la-commune" element={<Commune />} />
+          <Route path="/vie-municipale" element={<VieMunicipale />} />
+          <Route path="/demarches" element={<DemarchesAdmin />} />
+          <Route path="/vie-locale" element={<VieLocale />} />
+          <Route path="/intercommunalite" element={<Intercommunalite />} />
+          <Route path="/actualites" element={<Actualites />} />
+          <Route path="/evenements" element={<Evenements />} />
+          <Route path="/contact" element={<Contact />} />
+        </Route>
+        {/* Maquette 2 – Style Friesen */}
+        <Route path="/v2" element={<MainLayoutV2 />}>
+          <Route index element={<HomeV2 />} />
+          <Route path="decouvrir" element={<CommuneV2 />} />
+          <Route path="vie-municipale" element={<VieMunicipaleV2 />} />
+          <Route path="demarches" element={<DemarchesV2 />} />
+          <Route path="vie-locale" element={<VieLocaleV2 />} />
+          <Route path="intercommunalite" element={<IntercommunaliteV2 />} />
+          <Route path="actualites" element={<ActualitesV2 />} />
+          <Route path="agenda" element={<AgendaV2 />} />
+          <Route path="contact" element={<ContactV2 />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
+export default App;
