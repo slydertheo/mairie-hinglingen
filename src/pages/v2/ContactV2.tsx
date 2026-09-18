@@ -1,10 +1,15 @@
 import { useState } from 'react';
 import { Send, CheckCircle, AlertCircle } from 'lucide-react';
-import { MAIRIE_ADDRESS, MAIRIE_CITY, MAIRIE_PHONE, MAIRIE_EMAIL, MAIRIE_HORAIRES, COMMUNE_SHORT } from '../../data';
+import { useSettings } from '../../lib/contentStore';
+
+const MAP_DELTA = 0.01;
 
 const SUBJECTS = ['Renseignement général', 'État civil', 'Urbanisme', 'Voirie & travaux', 'Environnement', 'Associations', 'Autre demande'];
 
 export default function ContactV2() {
+  const settings = useSettings();
+  const { mairieAddress: MAIRIE_ADDRESS, mairieCity: MAIRIE_CITY, mairiePhone: MAIRIE_PHONE, mairieEmail: MAIRIE_EMAIL, mairieHoraires: MAIRIE_HORAIRES, communeShort: COMMUNE_SHORT, communeLat, communeLng } = settings;
+  const MAP_BBOX = [communeLng - MAP_DELTA, communeLat - MAP_DELTA, communeLng + MAP_DELTA, communeLat + MAP_DELTA].join(',');
   const [form, setForm] = useState({ name: '', email: '', phone: '', subject: SUBJECTS[0], message: '' });
   const [status, setStatus] = useState<'idle' | 'sending' | 'success'>('idle');
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -22,7 +27,14 @@ export default function ContactV2() {
     ev.preventDefault();
     if (!validate()) return;
     setStatus('sending');
-    setTimeout(() => { setStatus('success'); setForm({ name: '', email: '', phone: '', subject: SUBJECTS[0], message: '' }); }, 1200);
+    // Pas de back-end disponible : on ouvre le client mail de l'usager, pré-rempli, vers l'adresse de la mairie.
+    const body = `Nom : ${form.name}\nEmail : ${form.email}\nTéléphone : ${form.phone || 'non renseigné'}\n\n${form.message}`;
+    const mailto = `mailto:${MAIRIE_EMAIL}?subject=${encodeURIComponent(`[Site mairie] ${form.subject}`)}&body=${encodeURIComponent(body)}`;
+    window.setTimeout(() => {
+      window.location.href = mailto;
+      setStatus('success');
+      setForm({ name: '', email: '', phone: '', subject: SUBJECTS[0], message: '' });
+    }, 600);
   };
 
   const change = (ev: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -44,9 +56,9 @@ export default function ContactV2() {
           <div className="bg-white border border-gray-200 rounded-2xl p-5">
             <h2 className="font-bold text-blue-700 mb-4">📍 Coordonnées</h2>
             <ul className="space-y-3 text-sm text-gray-600">
-              <li className="flex gap-2">📍 <span>{MAIRIE_ADDRESS}<br />{MAIRIE_CITY}</span></li>
-              <li className="flex gap-2">📞 <a href={`tel:${MAIRIE_PHONE}`} className="text-blue-600 hover:underline">{MAIRIE_PHONE}</a></li>
-              <li className="flex gap-2">✉️ <a href={`mailto:${MAIRIE_EMAIL}`} className="text-blue-600 hover:underline break-all">{MAIRIE_EMAIL}</a></li>
+              <li className="flex gap-2"><span aria-hidden="true">📍</span> <span>{MAIRIE_ADDRESS}<br />{MAIRIE_CITY}</span></li>
+              <li className="flex gap-2"><span aria-hidden="true">📞</span> <a href={`tel:${MAIRIE_PHONE}`} className="text-blue-600 hover:underline">{MAIRIE_PHONE}</a></li>
+              <li className="flex gap-2"><span aria-hidden="true">✉️</span> <a href={`mailto:${MAIRIE_EMAIL}`} className="text-blue-600 hover:underline break-all">{MAIRIE_EMAIL}</a></li>
             </ul>
           </div>
           <div className="bg-white border border-gray-200 rounded-2xl p-5">
@@ -71,8 +83,8 @@ export default function ContactV2() {
             {status === 'success' ? (
               <div className="text-center py-8">
                 <CheckCircle size={48} className="text-green-500 mx-auto mb-3" aria-hidden="true" />
-                <h3 className="text-lg font-bold text-green-800 mb-2">Message envoyé !</h3>
-                <p className="text-green-700 text-sm">Nous vous répondrons dans les meilleurs délais.</p>
+                <h3 className="text-lg font-bold text-green-800 mb-2">Votre client mail va s'ouvrir</h3>
+                <p className="text-green-700 text-sm">Un message pré-rempli à destination de {MAIRIE_EMAIL} a été préparé : il ne reste qu'à l'envoyer depuis votre messagerie.</p>
                 <button onClick={() => setStatus('idle')} className="mt-4 bg-green-600 hover:bg-green-700 text-white font-medium px-6 py-2 rounded-full text-sm transition-colors">Envoyer un autre message</button>
               </div>
             ) : (
@@ -128,7 +140,7 @@ export default function ContactV2() {
             </div>
             <iframe
               title={`Plan d'accès – Mairie de ${COMMUNE_SHORT}`}
-              src="https://www.openstreetmap.org/export/embed.html?bbox=7.2,47.8,7.4,47.9&layer=mapnik"
+              src={`https://www.openstreetmap.org/export/embed.html?bbox=${MAP_BBOX}&layer=mapnik&marker=${communeLat},${communeLng}`}
               className="w-full h-64"
               loading="lazy"
               sandbox="allow-scripts allow-same-origin"

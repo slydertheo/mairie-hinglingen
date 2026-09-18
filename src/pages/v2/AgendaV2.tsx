@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { EVENTS_DATA } from '../../data';
+import { useEvents } from '../../lib/contentStore';
 
-const CATS = ['Tous', ...Array.from(new Set(EVENTS_DATA.map(e => e.category)))];
 const MONTH_NAMES = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 const DAY_NAMES = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
 
@@ -16,6 +15,8 @@ const CAT_COLORS: Record<string, string> = {
 };
 
 export default function AgendaV2() {
+  const eventsData = useEvents();
+  const CATS = ['Tous', ...Array.from(new Set(eventsData.map(e => e.category)))];
   const now = new Date();
   const [month, setMonth] = useState(now.getMonth());
   const [year, setYear] = useState(now.getFullYear());
@@ -26,13 +27,15 @@ export default function AgendaV2() {
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
   const eventDays = new Set(
-    EVENTS_DATA.filter(e => { const d = new Date(e.date); return d.getFullYear() === year && d.getMonth() === month; }).map(e => new Date(e.date).getDate())
+    eventsData.filter(e => { const d = new Date(e.date); return d.getFullYear() === year && d.getMonth() === month; }).map(e => new Date(e.date).getDate())
   );
 
   const prev = () => { if (month === 0) { setMonth(11); setYear(y => y - 1); } else setMonth(m => m - 1); };
   const next = () => { if (month === 11) { setMonth(0); setYear(y => y + 1); } else setMonth(m => m + 1); };
 
-  const filtered = EVENTS_DATA.filter(e => cat === 'Tous' || e.category === cat);
+  const filtered = eventsData
+    .filter(e => cat === 'Tous' || e.category === cat)
+    .sort((a, b) => a.date.localeCompare(b.date));
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">

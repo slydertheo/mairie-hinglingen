@@ -1,14 +1,15 @@
 import { useState } from 'react';
 import { Search } from 'lucide-react';
-import { NEWS_DATA } from '../../data';
-
-const CATS = ['Toutes', ...Array.from(new Set(NEWS_DATA.map(n => n.category)))];
+import { useNews } from '../../lib/contentStore';
 
 export default function ActualitesV2() {
+  const newsData = useNews();
+  const sorted = [...newsData].sort((a, b) => b.date.localeCompare(a.date));
+  const CATS = ['Toutes', ...Array.from(new Set(sorted.map(n => n.category)))];
   const [search, setSearch] = useState('');
   const [cat, setCat] = useState('Toutes');
 
-  const filtered = NEWS_DATA.filter(n => {
+  const filtered = sorted.filter(n => {
     const matchS = n.title.toLowerCase().includes(search.toLowerCase()) || n.summary.toLowerCase().includes(search.toLowerCase());
     const matchC = cat === 'Toutes' || n.category === cat;
     return matchS && matchC;

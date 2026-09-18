@@ -1,16 +1,14 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Calendar, MapPin, Phone, Mail, Clock, FileText, ExternalLink } from 'lucide-react';
-import {
-  COMMUNE_SHORT, MAYOR_NAME, MAYOR_MESSAGE,
-  NEWS_DATA, EVENTS_DATA,
-  MAIRIE_ADDRESS, MAIRIE_CITY, MAIRIE_PHONE, MAIRIE_EMAIL, MAIRIE_HORAIRES,
-} from '../data';
+import { useNews, useEvents, useDocuments, useSettings, useDecouvrirVignettes } from '../lib/contentStore';
+import WeatherWidget from '../components/v2/WeatherWidget';
+import SocialLinks from '../components/v2/SocialLinks';
 
 // --- News carousel ---
 function NewsCarousel() {
   const [idx, setIdx] = useState(0);
-  const items = NEWS_DATA;
+  const items = [...useNews()].sort((a, b) => b.date.localeCompare(a.date));
   const visible = 3;
   const max = items.length - visible;
 
@@ -72,7 +70,7 @@ function NewsCarousel() {
 
 // --- Events carousel ---
 function EventsList() {
-  const events = EVENTS_DATA.slice(0, 4);
+  const events = [...useEvents()].sort((a, b) => a.date.localeCompare(b.date)).slice(0, 4);
   return (
     <div className="space-y-3">
       {events.map((e) => {
@@ -99,20 +97,30 @@ function EventsList() {
 const QUICK = [
   { emoji: '📋', label: 'Démarches', sub: 'État civil, urbanisme…', href: '/demarches' },
   { emoji: '🏛️', label: 'Vie Municipale', sub: 'Conseil, bulletins…', href: '/vie-municipale' },
-  { emoji: '🌿', label: 'Découvrir', sub: 'Histoire, patrimoine…', href: '/la-commune' },
-  { emoji: '📅', label: 'Agenda', sub: 'Événements à venir', href: '/evenements' },
+  { emoji: '🌿', label: 'Découvrir', sub: 'Histoire, patrimoine…', href: '/decouvrir' },
+  { emoji: '📅', label: 'Agenda', sub: 'Événements à venir', href: '/agenda' },
   { emoji: '📞', label: 'Contact', sub: 'Nous joindre', href: '/contact' },
   { emoji: '📥', label: 'Documents', sub: 'Téléchargements PDF', href: '/demarches#documents' },
 ];
 
 export default function HomeV2() {
+  const settings = useSettings();
+  const COMMUNE_SHORT = settings.communeShort;
+  const MAYOR_NAME = settings.mayorName;
+  const MAYOR_MESSAGE = settings.mayorMessage;
+  const MAIRIE_ADDRESS = settings.mairieAddress;
+  const MAIRIE_CITY = settings.mairieCity;
+  const MAIRIE_PHONE = settings.mairiePhone;
+  const MAIRIE_EMAIL = settings.mairieEmail;
+  const MAIRIE_HORAIRES = settings.mairieHoraires;
+  const vignettes = useDecouvrirVignettes();
   return (
     <>
       {/* Hero – pleine largeur, style Friesen */}
       <section className="relative" aria-label="Bandeau principal">
         <div className="relative h-[360px] md:h-[440px] overflow-hidden">
           <img
-            src="https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=1600&q=80"
+            src={settings.homeHeroImage}
             alt={`Vue de la commune de ${COMMUNE_SHORT}`}
             className="w-full h-full object-cover"
             loading="eager"
@@ -121,11 +129,10 @@ export default function HomeV2() {
           <div className="absolute inset-0 bg-black/30" aria-hidden="true" />
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
             <h1 className="text-3xl md:text-5xl font-bold text-white drop-shadow-lg mb-3">
-              Bienvenue sur le site officiel de la<br />
-              <span className="text-yellow-300">Mairie de {COMMUNE_SHORT}</span>
+              {settings.homeHeroTitle}
             </h1>
             <p className="text-white/90 text-base md:text-lg drop-shadow">
-              Commune du Haut-Rhin – Sundgau – Grand Est
+              {settings.homeHeroSubtitle}
             </p>
           </div>
         </div>
@@ -178,7 +185,7 @@ export default function HomeV2() {
               </h2>
               <EventsList />
               <div className="mt-4">
-                <Link to="/evenements" className="inline-block border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white font-medium px-6 py-2 rounded-full transition-colors text-sm">
+                <Link to="/agenda" className="inline-block border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white font-medium px-6 py-2 rounded-full transition-colors text-sm">
                   Voir tout l'agenda →
                 </Link>
               </div>
@@ -202,7 +209,7 @@ export default function HomeV2() {
                 <blockquote className="text-gray-600 text-sm leading-relaxed italic border-l-4 border-blue-200 pl-4">
                   {MAYOR_MESSAGE.split('\n\n')[0]}
                 </blockquote>
-                <Link to="/la-commune" className="inline-block mt-4 text-blue-600 text-sm font-medium hover:underline">
+                <Link to="/decouvrir" className="inline-block mt-4 text-blue-600 text-sm font-medium hover:underline">
                   Lire le message complet →
                 </Link>
               </div>
@@ -218,21 +225,15 @@ export default function HomeV2() {
             🌿 Découvrir {COMMUNE_SHORT}
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[
-              { title: 'Histoire &amp; Patrimoine', img: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80', href: '/la-commune#historique' },
-              { title: 'Étangs &amp; Forêts', img: 'https://images.unsplash.com/photo-1500375592092-40eb2168fd21?w=400&q=80', href: '/la-commune#etangs-forets' },
-              { title: 'Galerie photos', img: 'https://images.unsplash.com/photo-1518495973542-4542c06a5843?w=400&q=80', href: '/la-commune#galerie' },
-              { title: 'Vie associative', img: 'https://images.unsplash.com/photo-1519750157634-b6d493a0f77c?w=400&q=80', href: '/vie-locale#associations' },
-            ].map((c) => (
+            {vignettes.map((c) => (
               <Link
-                key={c.href}
+                key={c.id}
                 to={c.href}
                 className="group relative h-40 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
-                dangerouslySetInnerHTML={undefined}
               >
                 <img src={c.img} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" aria-hidden="true" />
-                <span className="absolute bottom-3 left-3 text-white font-bold text-sm" dangerouslySetInnerHTML={{ __html: c.title }} />
+                <span className="absolute bottom-3 left-3 text-white font-bold text-sm">{c.title}</span>
               </Link>
             ))}
           </div>
@@ -242,10 +243,15 @@ export default function HomeV2() {
       {/* Infos pratiques / Contact – encart simple */}
       <section className="bg-blue-50 border-t border-blue-100 py-10" aria-labelledby="infos-title">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 id="infos-title" className="text-2xl font-bold text-blue-700 mb-6 flex items-center gap-2">
-            ℹ️ Infos pratiques
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+            <h2 id="infos-title" className="text-2xl font-bold text-blue-700 flex items-center gap-2">
+              ℹ️ Infos pratiques
+            </h2>
+            <SocialLinks />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Météo */}
+            <WeatherWidget />
             {/* Coordonnées */}
             <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
               <h3 className="font-bold text-gray-900 mb-3">📍 Coordonnées</h3>
@@ -302,26 +308,19 @@ export default function HomeV2() {
             📥 Téléchargements
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {[
-              'Bulletin municipal Hiver 2025',
-              'Bulletin municipal Automne 2025',
-              'Compte rendu CM – Décembre 2025',
-              'PLU – Règlement',
-              'Formulaire demande de logement',
-              'Compte rendu CM – Novembre 2025',
-            ].map((doc) => (
+            {[...useDocuments()].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 6).map((doc) => (
               <a
-                key={doc}
-                href="#"
+                key={doc.id}
+                href={doc.fileUrl}
                 className="flex items-center gap-3 bg-white border border-gray-200 rounded-xl px-4 py-3 hover:border-blue-300 hover:shadow-sm transition-all group"
-                aria-label={`Télécharger : ${doc}`}
+                aria-label={`Télécharger : ${doc.title}`}
               >
                 <span className="text-2xl flex-shrink-0" aria-hidden="true">📄</span>
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-gray-800 group-hover:text-blue-700 transition-colors truncate">{doc}</div>
+                  <div className="text-sm font-medium text-gray-800 group-hover:text-blue-700 transition-colors truncate">{doc.title}</div>
                   <div className="text-xs text-blue-500 flex items-center gap-1 mt-0.5">
                     <FileText size={10} aria-hidden="true" />
-                    Télécharger PDF
+                    Télécharger PDF{doc.size ? ` · ${doc.size}` : ''}
                   </div>
                 </div>
               </a>
