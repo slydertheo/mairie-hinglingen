@@ -152,6 +152,9 @@ export const EVENTS_DATA: EventItem[] = [
   },
 ];
 
+export const NEWS_CATEGORIES = ['Travaux', 'Événement', 'Publication', 'Services', 'Équipements', 'Transport'];
+export const EVENT_CATEGORIES = ['Officiel', 'Marché', 'Association', 'École', 'Sport', 'Culture'];
+
 export const COUNCIL_MEMBERS: CouncilMember[] = [
   { id: '1', name: 'Jean-Pierre Muller', role: 'Maire', commission: 'Travaux, Finances' },
   { id: '2', name: 'Marie Schmitt', role: '1ère Adjointe', commission: 'Éducation, Culture' },

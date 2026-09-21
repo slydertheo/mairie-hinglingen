@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { Upload } from 'lucide-react';
 import { fileToResizedBlob } from '../../lib/imageUpload';
-import { uploadImage } from '../../lib/contentStore';
+import { uploadImage, notifyToast } from '../../lib/contentStore';
 
 interface ImageFieldProps {
   label: string;
@@ -21,7 +21,7 @@ export default function ImageField({ label, value, onChange }: ImageFieldProps) 
       const url = await uploadImage(blob, file.name.replace(/\.[^.]+$/, '.jpg'));
       onChange(url);
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Impossible de charger cette image.');
+      notifyToast('error', err instanceof Error ? err.message : 'Impossible de charger cette image.');
     } finally {
       setBusy(false);
     }

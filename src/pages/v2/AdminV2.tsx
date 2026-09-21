@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { ChangeEvent, FormEvent, ReactNode } from 'react';
-import { Plus, Pencil, Trash2, X, AlertTriangle, RotateCcw } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, AlertTriangle, RotateCcw, Check } from 'lucide-react';
 import type {
   NewsItem, EventItem, Document, Association, Commerce, CouncilMember, PointCarte, SiteSettings,
   GalleryImage, PatrimoineItem, TimelineEvent, EtangInfo, Commission, Deliberation, AffichageItem,
@@ -12,10 +12,10 @@ import {
   resetNews, resetEvents, resetDocuments, resetAssociations, resetCommerces, resetCouncil, resetPoints,
   useGallery, usePatrimoine, useTimeline, useEtangs, useCommissions, useDeliberations, useAffichage,
   useDecouvrirVignettes, useIntercoDelegues, useIntercoCompetences, useIntercoLiens, useDemarches,
-  useHomeLiens, usePrefectureLiens, useContactSubjects,
+  useHomeLiens, usePrefectureLiens, useContactSubjects, useNewsCategories, useEventCategories,
   saveGallery, savePatrimoine, saveTimeline, saveEtangs, saveCommissions, saveDeliberations, saveAffichage,
   saveDecouvrirVignettes, saveIntercoDelegues, saveIntercoCompetences, saveIntercoLiens, saveDemarches,
-  saveHomeLiens, savePrefectureLiens, saveContactSubjects,
+  saveHomeLiens, savePrefectureLiens, saveContactSubjects, saveNewsCategories, saveEventCategories,
   resetGallery, resetPatrimoine, resetTimeline, resetEtangs, resetCommissions, resetDeliberations, resetAffichage,
   resetDecouvrirVignettes, resetIntercoDelegues, resetIntercoCompetences, resetIntercoLiens, resetDemarches,
   resetHomeLiens, resetPrefectureLiens,
@@ -23,6 +23,8 @@ import {
 } from '../../lib/contentStore';
 import { DOCUMENTS_DATA } from '../../data';
 import ImageField from '../../components/v2/ImageField';
+import ToastHost from '../../components/v2/ToastHost';
+import ConfirmDialog from '../../components/v2/ConfirmDialog';
 
 function newId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -43,60 +45,51 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 
 const inputCls = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
 
+/** Avertit via la boîte de dialogue native du navigateur si on quitte/recharge la page avec des modifications non enregistrées. */
+function useUnsavedWarning(dirty: boolean) {
+  useEffect(() => {
+    if (!dirty) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [dirty]);
+}
+
+function SaveStatus({ dirty }: { dirty: boolean }) {
+  if (dirty) {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs text-amber-600 font-medium">
+        <AlertTriangle size={12} aria-hidden="true" /> Modifications non enregistrées
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 text-xs text-green-600 font-medium">
+      <Check size={12} aria-hidden="true" /> À jour
+    </span>
+  );
+}
+
 // --- Actualités ---
 function NewsAdmin() {
   const items = useNews();
-  const [editing, setEditing] = useState<NewsItem | null>(null);
-
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!editing) return;
-    const exists = items.some(i => i.id === editing.id);
-    const next = exists ? items.map(i => (i.id === editing.id ? editing : i)) : [editing, ...items];
-    saveNews(next);
-    setEditing(null);
-  };
-
-  const remove = (id: string) => {
-    if (confirm('Supprimer cette actualité ?')) saveNews(items.filter(i => i.id !== id));
-  };
-
+  const categories = useNewsCategories();
   return (
-    <div>
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="font-bold text-gray-900">Actualités ({items.length})</h2>
-        <div className="flex gap-2">
-          <button onClick={() => resetNews()} className="text-xs text-gray-400 hover:text-red-600">Réinitialiser</button>
-          <button
-            onClick={() => setEditing({ id: newId(), title: '', summary: '', date: new Date().toISOString().slice(0, 10), category: 'Actualité', slug: '' })}
-            className="inline-flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-3 py-1.5 rounded-lg"
-          >
-            <Plus size={14} /> Ajouter
-          </button>
-        </div>
-      </div>
-
-      <div className="space-y-2 mb-4">
-        {items.map(n => (
-          <div key={n.id} className="flex items-center justify-between bg-white border border-gray-200 rounded-lg px-4 py-2.5">
-            <div className="min-w-0">
-              <div className="text-sm font-medium text-gray-800 truncate">{n.title}</div>
-              <div className="text-xs text-gray-400">{n.date} · {n.category}</div>
-            </div>
-            <div className="flex gap-1 flex-shrink-0">
-              <button onClick={() => setEditing(n)} className="p-1.5 text-gray-400 hover:text-blue-600" aria-label={`Modifier ${n.title}`}><Pencil size={15} /></button>
-              <button onClick={() => remove(n.id)} className="p-1.5 text-gray-400 hover:text-red-600" aria-label={`Supprimer ${n.title}`}><Trash2 size={15} /></button>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {editing && (
-        <form onSubmit={handleSubmit} className="bg-blue-50 border border-blue-100 rounded-xl p-5 space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="font-bold text-blue-800 text-sm">{items.some(i => i.id === editing.id) ? 'Modifier' : 'Nouvelle'} actualité</h3>
-            <button type="button" onClick={() => setEditing(null)} aria-label="Fermer"><X size={16} /></button>
-          </div>
+    <ListEditor<NewsItem>
+      title="Actualités"
+      items={items}
+      onSave={saveNews}
+      onReset={resetNews}
+      confirmLabel="cette actualité"
+      makeNew={() => ({ id: newId(), title: '', summary: '', date: new Date().toISOString().slice(0, 10), category: categories[0] ?? 'Actualité', slug: '' })}
+      rowLabel={n => n.title}
+      rowSub={n => `${n.date} · ${n.category}`}
+      formTitle={isNew => isNew ? 'Nouvelle actualité' : 'Modifier l\'actualité'}
+      renderForm={(editing, setEditing) => (
+        <>
           <Field label="Titre">
             <input required className={inputCls} value={editing.title}
               onChange={e => setEditing({ ...editing, title: e.target.value, slug: slugify(e.target.value) })} />
@@ -111,73 +104,38 @@ function NewsAdmin() {
                 onChange={e => setEditing({ ...editing, date: e.target.value })} />
             </Field>
             <Field label="Catégorie">
-              <input required className={inputCls} value={editing.category}
+              <input required list="news-categories" className={inputCls} value={editing.category}
                 onChange={e => setEditing({ ...editing, category: e.target.value })} />
+              <datalist id="news-categories">
+                {categories.map(c => <option key={c} value={c} />)}
+              </datalist>
             </Field>
           </div>
           <ImageField label="Image (optionnel)" value={editing.image ?? ''}
             onChange={url => setEditing({ ...editing, image: url })} />
-          <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">Enregistrer</button>
-        </form>
+        </>
       )}
-    </div>
+    />
   );
 }
 
 // --- Événements ---
 function EventsAdmin() {
   const items = useEvents();
-  const [editing, setEditing] = useState<EventItem | null>(null);
-
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!editing) return;
-    const exists = items.some(i => i.id === editing.id);
-    const next = exists ? items.map(i => (i.id === editing.id ? editing : i)) : [editing, ...items];
-    saveEvents(next);
-    setEditing(null);
-  };
-
-  const remove = (id: string) => {
-    if (confirm('Supprimer cet événement ?')) saveEvents(items.filter(i => i.id !== id));
-  };
-
+  const categories = useEventCategories();
   return (
-    <div>
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="font-bold text-gray-900">Événements ({items.length})</h2>
-        <div className="flex gap-2">
-          <button onClick={() => resetEvents()} className="text-xs text-gray-400 hover:text-red-600">Réinitialiser</button>
-          <button
-            onClick={() => setEditing({ id: newId(), title: '', description: '', date: new Date().toISOString().slice(0, 10), location: '', category: 'Officiel' })}
-            className="inline-flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-3 py-1.5 rounded-lg"
-          >
-            <Plus size={14} /> Ajouter
-          </button>
-        </div>
-      </div>
-
-      <div className="space-y-2 mb-4">
-        {items.map(ev => (
-          <div key={ev.id} className="flex items-center justify-between bg-white border border-gray-200 rounded-lg px-4 py-2.5">
-            <div className="min-w-0">
-              <div className="text-sm font-medium text-gray-800 truncate">{ev.title}</div>
-              <div className="text-xs text-gray-400">{ev.date} · {ev.location}</div>
-            </div>
-            <div className="flex gap-1 flex-shrink-0">
-              <button onClick={() => setEditing(ev)} className="p-1.5 text-gray-400 hover:text-blue-600" aria-label={`Modifier ${ev.title}`}><Pencil size={15} /></button>
-              <button onClick={() => remove(ev.id)} className="p-1.5 text-gray-400 hover:text-red-600" aria-label={`Supprimer ${ev.title}`}><Trash2 size={15} /></button>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {editing && (
-        <form onSubmit={handleSubmit} className="bg-blue-50 border border-blue-100 rounded-xl p-5 space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="font-bold text-blue-800 text-sm">{items.some(i => i.id === editing.id) ? 'Modifier' : 'Nouvel'} événement</h3>
-            <button type="button" onClick={() => setEditing(null)} aria-label="Fermer"><X size={16} /></button>
-          </div>
+    <ListEditor<EventItem>
+      title="Événements"
+      items={items}
+      onSave={saveEvents}
+      onReset={resetEvents}
+      confirmLabel="cet événement"
+      makeNew={() => ({ id: newId(), title: '', description: '', date: new Date().toISOString().slice(0, 10), location: '', category: categories[0] ?? 'Officiel' })}
+      rowLabel={ev => ev.title}
+      rowSub={ev => `${ev.date} · ${ev.location}`}
+      formTitle={isNew => isNew ? 'Nouvel événement' : 'Modifier l\'événement'}
+      renderForm={(editing, setEditing) => (
+        <>
           <Field label="Titre">
             <input required className={inputCls} value={editing.title}
               onChange={e => setEditing({ ...editing, title: e.target.value })} />
@@ -202,71 +160,76 @@ function EventsAdmin() {
                 onChange={e => setEditing({ ...editing, location: e.target.value })} />
             </Field>
             <Field label="Catégorie">
-              <input required className={inputCls} value={editing.category}
+              <input required list="event-categories" className={inputCls} value={editing.category}
                 onChange={e => setEditing({ ...editing, category: e.target.value })} />
+              <datalist id="event-categories">
+                {categories.map(c => <option key={c} value={c} />)}
+              </datalist>
             </Field>
           </div>
-          <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">Enregistrer</button>
-        </form>
+        </>
       )}
-    </div>
+    />
+  );
+}
+
+function CategoriesAdmin() {
+  const newsCategories = useNewsCategories();
+  const eventCategories = useEventCategories();
+  const [newsText, setNewsText] = useState(() => newsCategories.join('\n'));
+  const [eventsText, setEventsText] = useState(() => eventCategories.join('\n'));
+  const [dirty, setDirty] = useState(false);
+  useUnsavedWarning(dirty);
+
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    saveNewsCategories(newsText.split('\n').map(l => l.trim()).filter(Boolean));
+    saveEventCategories(eventsText.split('\n').map(l => l.trim()).filter(Boolean));
+    setDirty(false);
+  };
+
+  return (
+    <form onSubmit={submit} className="space-y-6">
+      <p className="text-xs text-gray-400">
+        Ces catégories apparaissent comme suggestions quand tu écris une actualité ou un événement — tu
+        peux toujours taper une catégorie qui n'est pas dans la liste, elle sera acceptée aussi.
+      </p>
+      <div className="bg-white border border-gray-200 rounded-2xl p-5 space-y-3">
+        <h2 className="font-bold text-gray-900">🗞️ Catégories d'actualités</h2>
+        <Field label="Une catégorie par ligne">
+          <textarea rows={6} className={inputCls} value={newsText} onChange={e => { setNewsText(e.target.value); setDirty(true); }} />
+        </Field>
+      </div>
+      <div className="bg-white border border-gray-200 rounded-2xl p-5 space-y-3">
+        <h2 className="font-bold text-gray-900">📅 Catégories d'agenda</h2>
+        <Field label="Une catégorie par ligne">
+          <textarea rows={6} className={inputCls} value={eventsText} onChange={e => { setEventsText(e.target.value); setDirty(true); }} />
+        </Field>
+      </div>
+      <div className="flex items-center gap-3">
+        <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-5 py-2.5 rounded-lg">Enregistrer</button>
+        <SaveStatus dirty={dirty} />
+      </div>
+    </form>
   );
 }
 
 // --- Documents ---
 function DocumentsAdmin() {
   const items = useDocuments();
-  const [editing, setEditing] = useState<Document | null>(null);
-
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!editing) return;
-    const exists = items.some(i => i.id === editing.id);
-    const next = exists ? items.map(i => (i.id === editing.id ? editing : i)) : [editing, ...items];
-    saveDocuments(next);
-    setEditing(null);
-  };
-
-  const remove = (id: string) => {
-    if (confirm('Supprimer ce document ?')) saveDocuments(items.filter(i => i.id !== id));
-  };
-
   return (
-    <div>
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="font-bold text-gray-900">Documents ({items.length})</h2>
-        <div className="flex gap-2">
-          <button onClick={() => resetDocuments()} className="text-xs text-gray-400 hover:text-red-600">Réinitialiser</button>
-          <button
-            onClick={() => setEditing({ id: newId(), title: '', fileUrl: '#', fileType: 'pdf', date: new Date().toISOString().slice(0, 10), category: 'Bulletin' })}
-            className="inline-flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-3 py-1.5 rounded-lg"
-          >
-            <Plus size={14} /> Ajouter
-          </button>
-        </div>
-      </div>
-
-      <div className="space-y-2 mb-4">
-        {items.map(d => (
-          <div key={d.id} className="flex items-center justify-between bg-white border border-gray-200 rounded-lg px-4 py-2.5">
-            <div className="min-w-0">
-              <div className="text-sm font-medium text-gray-800 truncate">{d.title}</div>
-              <div className="text-xs text-gray-400">{d.date} · {d.category}</div>
-            </div>
-            <div className="flex gap-1 flex-shrink-0">
-              <button onClick={() => setEditing(d)} className="p-1.5 text-gray-400 hover:text-blue-600" aria-label={`Modifier ${d.title}`}><Pencil size={15} /></button>
-              <button onClick={() => remove(d.id)} className="p-1.5 text-gray-400 hover:text-red-600" aria-label={`Supprimer ${d.title}`}><Trash2 size={15} /></button>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {editing && (
-        <form onSubmit={handleSubmit} className="bg-blue-50 border border-blue-100 rounded-xl p-5 space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="font-bold text-blue-800 text-sm">{items.some(i => i.id === editing.id) ? 'Modifier' : 'Nouveau'} document</h3>
-            <button type="button" onClick={() => setEditing(null)} aria-label="Fermer"><X size={16} /></button>
-          </div>
+    <ListEditor<Document>
+      title="Documents"
+      items={items}
+      onSave={saveDocuments}
+      onReset={resetDocuments}
+      confirmLabel="ce document"
+      makeNew={() => ({ id: newId(), title: '', fileUrl: '#', fileType: 'pdf', date: new Date().toISOString().slice(0, 10), category: 'Bulletin' })}
+      rowLabel={d => d.title}
+      rowSub={d => `${d.date} · ${d.category}`}
+      formTitle={isNew => isNew ? 'Nouveau document' : 'Modifier le document'}
+      renderForm={(editing, setEditing) => (
+        <>
           <Field label="Titre">
             <input required className={inputCls} value={editing.title}
               onChange={e => setEditing({ ...editing, title: e.target.value })} />
@@ -285,10 +248,9 @@ function DocumentsAdmin() {
                 onChange={e => setEditing({ ...editing, category: e.target.value })} />
             </Field>
           </div>
-          <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">Enregistrer</button>
-        </form>
+        </>
       )}
-    </div>
+    />
   );
 }
 
@@ -312,6 +274,8 @@ function ListEditor<T extends { id: string }>({
   title, items, onSave, onReset, makeNew, rowLabel, rowSub, renderRow, formTitle, renderForm, confirmLabel,
 }: ListEditorProps<T>) {
   const [editing, setEditing] = useState<T | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<T | null>(null);
+  const [pendingReset, setPendingReset] = useState(false);
   const isNew = !!editing && !items.some(i => i.id === editing.id);
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
@@ -323,16 +287,12 @@ function ListEditor<T extends { id: string }>({
     setEditing(null);
   };
 
-  const remove = (id: string) => {
-    if (confirm(`Supprimer ${confirmLabel} ?`)) onSave(items.filter(i => i.id !== id));
-  };
-
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
         <h2 className="font-bold text-gray-900">{title} ({items.length})</h2>
         <div className="flex gap-2">
-          <button onClick={onReset} className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-red-600">
+          <button onClick={() => setPendingReset(true)} className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-red-600">
             <RotateCcw size={12} /> Réinitialiser
           </button>
           <button
@@ -357,7 +317,7 @@ function ListEditor<T extends { id: string }>({
             )}
             <div className="flex gap-1 flex-shrink-0">
               <button onClick={() => setEditing(item)} className="p-1.5 text-gray-400 hover:text-blue-600" aria-label={`Modifier ${rowLabel(item)}`}><Pencil size={15} /></button>
-              <button onClick={() => remove(item.id)} className="p-1.5 text-gray-400 hover:text-red-600" aria-label={`Supprimer ${rowLabel(item)}`}><Trash2 size={15} /></button>
+              <button onClick={() => setPendingDelete(item)} className="p-1.5 text-gray-400 hover:text-red-600" aria-label={`Supprimer ${rowLabel(item)}`}><Trash2 size={15} /></button>
             </div>
           </div>
         ))}
@@ -373,6 +333,28 @@ function ListEditor<T extends { id: string }>({
           {renderForm(editing, setEditing)}
           <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">Enregistrer</button>
         </form>
+      )}
+
+      {pendingDelete && (
+        <ConfirmDialog
+          message={`Supprimer ${confirmLabel} « ${rowLabel(pendingDelete)} » ? Cette action est immédiate et irréversible.`}
+          onCancel={() => setPendingDelete(null)}
+          onConfirm={() => {
+            onSave(items.filter(i => i.id !== pendingDelete.id));
+            setPendingDelete(null);
+          }}
+        />
+      )}
+
+      {pendingReset && (
+        <ConfirmDialog
+          message={`Réinitialiser « ${title} » ? Toutes les modifications faites sur cette liste seront perdues et remplacées par le contenu d'origine.`}
+          onCancel={() => setPendingReset(false)}
+          onConfirm={() => {
+            onReset();
+            setPendingReset(false);
+          }}
+        />
       )}
     </div>
   );
@@ -503,27 +485,28 @@ function PointsAdmin() {
 function AccueilBandeauAdmin() {
   const stored = useSettings();
   const [form, setForm] = useState<Pick<SiteSettings, 'homeHeroImage' | 'homeHeroTitle' | 'homeHeroSubtitle'>>(stored);
-  const [saved, setSaved] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  useUnsavedWarning(dirty);
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
     saveSettings({ ...stored, ...form });
-    setSaved(true);
+    setDirty(false);
   };
 
   return (
     <form onSubmit={submit} className="bg-white border border-gray-200 rounded-2xl p-5 space-y-3">
       <h2 className="font-bold text-gray-900">Bandeau d'accueil (hero)</h2>
-      <ImageField label="Photo de fond" value={form.homeHeroImage} onChange={url => { setForm({ ...form, homeHeroImage: url }); setSaved(false); }} />
+      <ImageField label="Photo de fond" value={form.homeHeroImage} onChange={url => { setForm({ ...form, homeHeroImage: url }); setDirty(true); }} />
       <Field label="Titre">
-        <input className={inputCls} value={form.homeHeroTitle} onChange={e => { setForm({ ...form, homeHeroTitle: e.target.value }); setSaved(false); }} />
+        <input className={inputCls} value={form.homeHeroTitle} onChange={e => { setForm({ ...form, homeHeroTitle: e.target.value }); setDirty(true); }} />
       </Field>
       <Field label="Sous-titre">
-        <input className={inputCls} value={form.homeHeroSubtitle} onChange={e => { setForm({ ...form, homeHeroSubtitle: e.target.value }); setSaved(false); }} />
+        <input className={inputCls} value={form.homeHeroSubtitle} onChange={e => { setForm({ ...form, homeHeroSubtitle: e.target.value }); setDirty(true); }} />
       </Field>
       <div className="flex items-center gap-3">
         <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">Enregistrer</button>
-        {saved && <span className="text-xs text-green-600 font-medium">Enregistré ✓</span>}
+        <SaveStatus dirty={dirty} />
       </div>
     </form>
   );
@@ -563,26 +546,27 @@ function AccueilDecouvrirAdmin() {
 function MotDuMaireAdmin() {
   const stored = useSettings();
   const [form, setForm] = useState<Pick<SiteSettings, 'mayorName' | 'mayorMessage'>>(stored);
-  const [saved, setSaved] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  useUnsavedWarning(dirty);
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
     saveSettings({ ...stored, ...form });
-    setSaved(true);
+    setDirty(false);
   };
 
   return (
     <form onSubmit={submit} className="bg-white border border-gray-200 rounded-2xl p-5 space-y-3">
       <h2 className="font-bold text-gray-900">🏛️ Mot du Maire</h2>
       <Field label="Nom du maire">
-        <input className={inputCls} value={form.mayorName} onChange={e => { setForm({ ...form, mayorName: e.target.value }); setSaved(false); }} />
+        <input className={inputCls} value={form.mayorName} onChange={e => { setForm({ ...form, mayorName: e.target.value }); setDirty(true); }} />
       </Field>
       <Field label="Message">
-        <textarea rows={6} className={inputCls} value={form.mayorMessage} onChange={e => { setForm({ ...form, mayorMessage: e.target.value }); setSaved(false); }} />
+        <textarea rows={6} className={inputCls} value={form.mayorMessage} onChange={e => { setForm({ ...form, mayorMessage: e.target.value }); setDirty(true); }} />
       </Field>
       <div className="flex items-center gap-3">
         <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">Enregistrer</button>
-        {saved && <span className="text-xs text-green-600 font-medium">Enregistré ✓</span>}
+        <SaveStatus dirty={dirty} />
       </div>
     </form>
   );
@@ -593,26 +577,27 @@ function InfosPratiquesAdmin() {
   const stored = useSettings();
   type Fields = Pick<SiteSettings, 'mairieAddress' | 'mairieCity' | 'mairiePhone' | 'mairieEmail' | 'mairieHoraires' | 'facebookUrl' | 'intramurosUrl'>;
   const [form, setForm] = useState<Fields>(stored);
-  const [saved, setSaved] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  useUnsavedWarning(dirty);
 
   const field = (key: keyof Fields) => ({
     value: form[key] as string,
     onChange: (e: ChangeEvent<HTMLInputElement>) => {
       setForm({ ...form, [key]: e.target.value });
-      setSaved(false);
+      setDirty(true);
     },
   });
 
   const setHoraire = (idx: number, value: string) => {
     const next = form.mairieHoraires.map((h, i) => (i === idx ? { ...h, horaires: value } : h));
     setForm({ ...form, mairieHoraires: next });
-    setSaved(false);
+    setDirty(true);
   };
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
     saveSettings({ ...stored, ...form });
-    setSaved(true);
+    setDirty(false);
   };
 
   const homeLiens = useHomeLiens();
@@ -643,7 +628,7 @@ function InfosPratiquesAdmin() {
         </div>
         <div className="flex items-center gap-3">
           <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">Enregistrer</button>
-          {saved && <span className="text-xs text-green-600 font-medium">Enregistré ✓</span>}
+          <SaveStatus dirty={dirty} />
         </div>
       </form>
 
@@ -677,7 +662,8 @@ function DecouvrirAdmin() {
   const stored = useSettings();
   type Fields = Pick<SiteSettings, 'communePresentation' | 'historiqueIntro' | 'etangsIntro' | 'etangsImage' | 'forestIntro' | 'forestImage' | 'forestSentiers'>;
   const [form, setForm] = useState<Fields>(stored);
-  const [saved, setSaved] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  useUnsavedWarning(dirty);
   const timeline = useTimeline();
   const patrimoine = usePatrimoine();
   const etangs = useEtangs();
@@ -687,14 +673,14 @@ function DecouvrirAdmin() {
     value: form[key],
     onChange: (e: ChangeEvent<HTMLTextAreaElement>) => {
       setForm({ ...form, [key]: e.target.value });
-      setSaved(false);
+      setDirty(true);
     },
   });
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
     saveSettings({ ...stored, ...form });
-    setSaved(true);
+    setDirty(false);
   };
 
   return (
@@ -718,7 +704,7 @@ function DecouvrirAdmin() {
 
         <div className="flex items-center gap-3">
           <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">Enregistrer les textes</button>
-          {saved && <span className="text-xs text-green-600 font-medium">Enregistré ✓</span>}
+          <SaveStatus dirty={dirty} />
         </div>
       </form>
 
@@ -780,17 +766,17 @@ function DecouvrirAdmin() {
         <Field label="Introduction étangs">
           <textarea rows={2} className={inputCls} {...field('etangsIntro')} />
         </Field>
-        <ImageField label="Photo des étangs" value={form.etangsImage} onChange={url => { setForm({ ...form, etangsImage: url }); setSaved(false); }} />
+        <ImageField label="Photo des étangs" value={form.etangsImage} onChange={url => { setForm({ ...form, etangsImage: url }); setDirty(true); }} />
         <Field label="Introduction forêt">
           <textarea rows={2} className={inputCls} {...field('forestIntro')} />
         </Field>
-        <ImageField label="Photo de la forêt" value={form.forestImage} onChange={url => { setForm({ ...form, forestImage: url }); setSaved(false); }} />
+        <ImageField label="Photo de la forêt" value={form.forestImage} onChange={url => { setForm({ ...form, forestImage: url }); setDirty(true); }} />
         <Field label="Sentiers balisés (une ligne par sentier)">
           <textarea rows={3} className={inputCls} {...field('forestSentiers')} />
         </Field>
         <div className="flex items-center gap-3">
           <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">Enregistrer</button>
-          {saved && <span className="text-xs text-green-600 font-medium">Enregistré ✓</span>}
+          <SaveStatus dirty={dirty} />
         </div>
       </form>
 
@@ -844,20 +830,21 @@ function MarcheAdmin() {
   const stored = useSettings();
   type Fields = Pick<SiteSettings, 'marketTitle' | 'marketSchedule' | 'marketLocation' | 'marketDescription' | 'foodtruckTitle' | 'foodtruckSchedule' | 'foodtruckLocation' | 'foodtruckPhone' | 'foodtruckDescription'>;
   const [form, setForm] = useState<Fields>(stored);
-  const [saved, setSaved] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  useUnsavedWarning(dirty);
 
   const field = (key: keyof Fields) => ({
     value: form[key],
     onChange: (e: ChangeEvent<HTMLInputElement>) => {
       setForm({ ...form, [key]: e.target.value });
-      setSaved(false);
+      setDirty(true);
     },
   });
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
     saveSettings({ ...stored, ...form });
-    setSaved(true);
+    setDirty(false);
   };
 
   return (
@@ -878,7 +865,7 @@ function MarcheAdmin() {
       <Field label="Description food truck"><input className={inputCls} {...field('foodtruckDescription')} /></Field>
       <div className="flex items-center gap-3">
         <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">Enregistrer</button>
-        {saved && <span className="text-xs text-green-600 font-medium">Enregistré ✓</span>}
+        <SaveStatus dirty={dirty} />
       </div>
     </form>
   );
@@ -889,26 +876,27 @@ function EcoleAdmin() {
   const stored = useSettings();
   type EcoleFields = Pick<SiteSettings, 'ecoleName' | 'ecoleAddress' | 'ecolePhone' | 'ecoleEmail' | 'ecoleEffectif' | 'ecoleHoraires' | 'ecolePeriscolaire' | 'ecoleCollegeLycee' | 'ecoleInscriptions' | 'ecoleImage'>;
   const [form, setForm] = useState<EcoleFields>(stored);
-  const [saved, setSaved] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  useUnsavedWarning(dirty);
 
   const field = (key: keyof EcoleFields) => ({
     value: form[key],
     onChange: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       setForm({ ...form, [key]: e.target.value });
-      setSaved(false);
+      setDirty(true);
     },
   });
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
     saveSettings({ ...stored, ...form });
-    setSaved(true);
+    setDirty(false);
   };
 
   return (
     <form onSubmit={submit} className="bg-white border border-gray-200 rounded-2xl p-5 space-y-3">
       <h2 className="font-bold text-gray-900 mb-1">École</h2>
-      <ImageField label="Photo de l'école (optionnel)" value={form.ecoleImage} onChange={url => { setForm({ ...form, ecoleImage: url }); setSaved(false); }} />
+      <ImageField label="Photo de l'école (optionnel)" value={form.ecoleImage} onChange={url => { setForm({ ...form, ecoleImage: url }); setDirty(true); }} />
       <div className="grid grid-cols-2 gap-3">
         <Field label="Nom de l'école"><input className={inputCls} {...field('ecoleName')} /></Field>
         <Field label="Adresse"><input className={inputCls} {...field('ecoleAddress')} /></Field>
@@ -928,7 +916,7 @@ function EcoleAdmin() {
       </Field>
       <div className="flex items-center gap-3">
         <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">Enregistrer</button>
-        {saved && <span className="text-xs text-green-600 font-medium">Enregistré ✓</span>}
+        <SaveStatus dirty={dirty} />
       </div>
     </form>
   );
@@ -1129,7 +1117,8 @@ function IntercommunaliteAdmin() {
   const stored = useSettings();
   type IntercoFields = Pick<SiteSettings, 'intercoName' | 'intercoIntro' | 'intercoChiffres'>;
   const [form, setForm] = useState<IntercoFields>(stored);
-  const [saved, setSaved] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  useUnsavedWarning(dirty);
   const delegues = useIntercoDelegues();
   const competences = useIntercoCompetences();
   const liens = useIntercoLiens();
@@ -1137,7 +1126,7 @@ function IntercommunaliteAdmin() {
   const submit = (e: FormEvent) => {
     e.preventDefault();
     saveSettings({ ...stored, ...form });
-    setSaved(true);
+    setDirty(false);
   };
 
   return (
@@ -1145,17 +1134,17 @@ function IntercommunaliteAdmin() {
       <form onSubmit={submit} className="bg-white border border-gray-200 rounded-2xl p-5 space-y-3">
         <h2 className="font-bold text-gray-900">Présentation</h2>
         <Field label="Nom de l'intercommunalité">
-          <input className={inputCls} value={form.intercoName} onChange={e => { setForm({ ...form, intercoName: e.target.value }); setSaved(false); }} />
+          <input className={inputCls} value={form.intercoName} onChange={e => { setForm({ ...form, intercoName: e.target.value }); setDirty(true); }} />
         </Field>
         <Field label="Texte de présentation">
-          <textarea rows={3} className={inputCls} value={form.intercoIntro} onChange={e => { setForm({ ...form, intercoIntro: e.target.value }); setSaved(false); }} />
+          <textarea rows={3} className={inputCls} value={form.intercoIntro} onChange={e => { setForm({ ...form, intercoIntro: e.target.value }); setDirty(true); }} />
         </Field>
         <Field label="Chiffres clés">
-          <input className={inputCls} value={form.intercoChiffres} onChange={e => { setForm({ ...form, intercoChiffres: e.target.value }); setSaved(false); }} />
+          <input className={inputCls} value={form.intercoChiffres} onChange={e => { setForm({ ...form, intercoChiffres: e.target.value }); setDirty(true); }} />
         </Field>
         <div className="flex items-center gap-3">
           <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">Enregistrer</button>
-          {saved && <span className="text-xs text-green-600 font-medium">Enregistré ✓</span>}
+          <SaveStatus dirty={dirty} />
         </div>
       </form>
 
@@ -1319,12 +1308,13 @@ function PrefectureAdmin() {
 function ContactSubjectsAdmin() {
   const subjects = useContactSubjects();
   const [text, setText] = useState(() => subjects.join('\n'));
-  const [saved, setSaved] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  useUnsavedWarning(dirty);
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
     saveContactSubjects(text.split('\n').map(l => l.trim()).filter(Boolean));
-    setSaved(true);
+    setDirty(false);
   };
 
   return (
@@ -1336,11 +1326,11 @@ function ContactSubjectsAdmin() {
       <form onSubmit={submit} className="bg-white border border-gray-200 rounded-2xl p-5 space-y-3">
         <h2 className="font-bold text-gray-900">✏️ Sujets du formulaire de contact</h2>
         <Field label="Un sujet par ligne">
-          <textarea rows={8} className={inputCls} value={text} onChange={e => { setText(e.target.value); setSaved(false); }} />
+          <textarea rows={8} className={inputCls} value={text} onChange={e => { setText(e.target.value); setDirty(true); }} />
         </Field>
         <div className="flex items-center gap-3">
           <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">Enregistrer</button>
-          {saved && <span className="text-xs text-green-600 font-medium">Enregistré ✓</span>}
+          <SaveStatus dirty={dirty} />
         </div>
       </form>
     </div>
@@ -1352,20 +1342,21 @@ function SettingsAdmin() {
   const stored = useSettings();
   type Fields = Pick<SiteSettings, 'communeName' | 'communeShort' | 'communePostal' | 'communeCodeInsee' | 'communeDepartment' | 'communeRegion' | 'communePopulation' | 'communeSuperficie' | 'communeAltitude' | 'communeLat' | 'communeLng'>;
   const [form, setForm] = useState<Fields>(stored);
-  const [saved, setSaved] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  useUnsavedWarning(dirty);
 
   const field = (key: keyof Fields) => ({
     value: form[key] as string,
     onChange: (e: ChangeEvent<HTMLInputElement>) => {
       setForm({ ...form, [key]: e.target.value });
-      setSaved(false);
+      setDirty(true);
     },
   });
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
     saveSettings({ ...stored, ...form });
-    setSaved(true);
+    setDirty(false);
   };
 
   return (
@@ -1390,18 +1381,18 @@ function SettingsAdmin() {
         <div className="grid grid-cols-2 gap-3">
           <Field label="Latitude (centre carte &amp; météo)">
             <input type="number" step="0.0001" className={inputCls} value={form.communeLat}
-              onChange={e => { setForm({ ...form, communeLat: parseFloat(e.target.value) }); setSaved(false); }} />
+              onChange={e => { setForm({ ...form, communeLat: parseFloat(e.target.value) }); setDirty(true); }} />
           </Field>
           <Field label="Longitude (centre carte &amp; météo)">
             <input type="number" step="0.0001" className={inputCls} value={form.communeLng}
-              onChange={e => { setForm({ ...form, communeLng: parseFloat(e.target.value) }); setSaved(false); }} />
+              onChange={e => { setForm({ ...form, communeLng: parseFloat(e.target.value) }); setDirty(true); }} />
           </Field>
         </div>
       </fieldset>
 
       <div className="flex items-center gap-3">
         <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-5 py-2.5 rounded-lg">Enregistrer</button>
-        {saved && <span className="text-xs text-green-600 font-medium">Enregistré ✓</span>}
+        <SaveStatus dirty={dirty} />
       </div>
     </form>
   );
@@ -1535,6 +1526,7 @@ const GROUPS: Group[] = [
     tabs: [
       { key: 'news', label: 'Actualités', render: () => <NewsAdmin /> },
       { key: 'events', label: 'Événements', render: () => <EventsAdmin /> },
+      { key: 'categories', label: 'Catégories', render: () => <CategoriesAdmin /> },
     ],
   },
   {
@@ -1568,6 +1560,7 @@ export default function AdminV2() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <ToastHost />
       <div className="bg-blue-600 text-white rounded-2xl p-8 mb-6 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold mb-2">🔧 Espace mairie – Gestion du contenu</h1>

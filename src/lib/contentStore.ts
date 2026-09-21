@@ -5,7 +5,7 @@ import type {
   DecouvrirVignette, IntercoDelegue, IntercoCompetence, IntercoLien, DemarcheCategory, LienUtile,
 } from '../types';
 import {
-  NEWS_DATA, EVENTS_DATA, DOCUMENTS_DATA, ASSOCIATIONS_DATA, COMMERCES_DATA, COUNCIL_MEMBERS, POINTS_CARTE,
+  NEWS_DATA, EVENTS_DATA, NEWS_CATEGORIES, EVENT_CATEGORIES, DOCUMENTS_DATA, ASSOCIATIONS_DATA, COMMERCES_DATA, COUNCIL_MEMBERS, POINTS_CARTE,
   GALLERY_DATA, PATRIMOINE_DATA, TIMELINE_DATA, ETANGS_DATA, COMMISSIONS_DATA, DELIBERATIONS_DATA, AFFICHAGE_DATA,
   DECOUVRIR_VIGNETTES_DATA, INTERCO_DELEGUES_DATA, INTERCO_COMPETENCES_DATA, INTERCO_LIENS_DATA, DEMARCHES_DATA,
   HOME_LIENS_UTILES, PREFECTURE_LIENS, COMMUNE_PRESENTATION, CONTACT_SUBJECTS,
@@ -65,8 +65,14 @@ function loadOnce<T>(key: string, fallback: T): Promise<T> {
   return p;
 }
 
-async function putContent<T>(key: string, value: T) {
+export function notifyToast(type: 'success' | 'error', message: string) {
+  window.dispatchEvent(new CustomEvent('admin-toast', { detail: { type, message } }));
+}
+
+async function putContent<T>(key: string, value: T, successMessage?: string) {
   // Mise à jour optimiste : l'UI admin réagit immédiatement, avant même la réponse réseau.
+  const previous = cache.has(key) ? cache.get(key) : undefined;
+  const hadPrevious = cache.has(key);
   cache.set(key, value);
   emit(key);
   try {
@@ -79,9 +85,14 @@ async function putContent<T>(key: string, value: T) {
       body: JSON.stringify({ value }),
     });
     if (!res.ok) throw new Error(`PUT /api/content/${key} → ${res.status}`);
+    notifyToast('success', successMessage ?? 'Enregistré.');
   } catch (err) {
     console.error(`Échec de la sauvegarde de "${key}"`, err);
-    alert("La sauvegarde n'a pas pu être enregistrée sur le serveur. Vérifie ta connexion (ou reconnecte-toi dans l'espace mairie) puis réessaie.");
+    // On annule la mise à jour optimiste : mieux vaut montrer l'état réel (non sauvegardé)
+    // qu'un changement qui a l'air pris alors qu'il ne l'est pas sur le serveur.
+    if (hadPrevious) cache.set(key, previous as T); else cache.delete(key);
+    emit(key);
+    notifyToast('error', "Échec de l'enregistrement — vérifie ta connexion ou reconnecte-toi, puis réessaie.");
   }
 }
 
@@ -108,6 +119,8 @@ function createStore<T>(key: string, fallback: T) {
 
 const newsStore = createStore<NewsItem[]>('news', NEWS_DATA);
 const eventsStore = createStore<EventItem[]>('events', EVENTS_DATA);
+const newsCategoriesStore = createStore<string[]>('news_categories', NEWS_CATEGORIES);
+const eventCategoriesStore = createStore<string[]>('event_categories', EVENT_CATEGORIES);
 const documentsStore = createStore<Document[]>('documents', DOCUMENTS_DATA);
 const associationsStore = createStore<Association[]>('associations', ASSOCIATIONS_DATA);
 const commercesStore = createStore<Commerce[]>('commerces', COMMERCES_DATA);
@@ -138,6 +151,12 @@ export const useEvents = eventsStore.use;
 export const getEvents = eventsStore.get;
 export const saveEvents = eventsStore.save;
 export const resetEvents = eventsStore.reset;
+
+export const useNewsCategories = newsCategoriesStore.use;
+export const saveNewsCategories = newsCategoriesStore.save;
+
+export const useEventCategories = eventCategoriesStore.use;
+export const saveEventCategories = eventCategoriesStore.save;
 
 export const useDocuments = documentsStore.use;
 export const getDocuments = documentsStore.get;
