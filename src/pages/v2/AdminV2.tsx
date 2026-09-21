@@ -21,6 +21,7 @@ import {
   resetHomeLiens, resetPrefectureLiens,
   login, getToken, clearToken,
 } from '../../lib/contentStore';
+import { DOCUMENTS_DATA } from '../../data';
 import ImageField from '../../components/v2/ImageField';
 
 function newId() {
@@ -300,13 +301,15 @@ interface ListEditorProps<T extends { id: string }> {
   makeNew: () => T;
   rowLabel: (item: T) => string;
   rowSub: (item: T) => string;
+  /** Rendu personnalisé du contenu de la ligne (remplace rowLabel/rowSub visuellement, boutons modifier/supprimer inchangés). */
+  renderRow?: (item: T) => ReactNode;
   formTitle: (isNew: boolean) => string;
   renderForm: (editing: T, setEditing: (v: T) => void) => ReactNode;
   confirmLabel: string;
 }
 
 function ListEditor<T extends { id: string }>({
-  title, items, onSave, onReset, makeNew, rowLabel, rowSub, formTitle, renderForm, confirmLabel,
+  title, items, onSave, onReset, makeNew, rowLabel, rowSub, renderRow, formTitle, renderForm, confirmLabel,
 }: ListEditorProps<T>) {
   const [editing, setEditing] = useState<T | null>(null);
   const isNew = !!editing && !items.some(i => i.id === editing.id);
@@ -344,10 +347,14 @@ function ListEditor<T extends { id: string }>({
       <div className="space-y-2 mb-4">
         {items.map(item => (
           <div key={item.id} className="flex items-center justify-between bg-white border border-gray-200 rounded-lg px-4 py-2.5">
-            <div className="min-w-0">
-              <div className="text-sm font-medium text-gray-800 truncate">{rowLabel(item)}</div>
-              <div className="text-xs text-gray-400">{rowSub(item)}</div>
-            </div>
+            {renderRow ? (
+              <div className="min-w-0 flex-1">{renderRow(item)}</div>
+            ) : (
+              <div className="min-w-0">
+                <div className="text-sm font-medium text-gray-800 truncate">{rowLabel(item)}</div>
+                <div className="text-xs text-gray-400">{rowSub(item)}</div>
+              </div>
+            )}
             <div className="flex gap-1 flex-shrink-0">
               <button onClick={() => setEditing(item)} className="p-1.5 text-gray-400 hover:text-blue-600" aria-label={`Modifier ${rowLabel(item)}`}><Pencil size={15} /></button>
               <button onClick={() => remove(item.id)} className="p-1.5 text-gray-400 hover:text-red-600" aria-label={`Supprimer ${rowLabel(item)}`}><Trash2 size={15} /></button>
@@ -400,6 +407,7 @@ function AssociationsAdmin() {
               <input className={inputCls} value={editing.email ?? ''} onChange={e => setEditing({ ...editing, email: e.target.value })} />
             </Field>
           </div>
+          <ImageField label="Photo (optionnel)" value={editing.image ?? ''} onChange={url => setEditing({ ...editing, image: url })} />
         </>
       )}
     />
@@ -435,6 +443,7 @@ function CommercesAdmin() {
           <Field label="Horaires">
             <input required className={inputCls} value={editing.horaires} onChange={e => setEditing({ ...editing, horaires: e.target.value })} />
           </Field>
+          <ImageField label="Photo (optionnel)" value={editing.image ?? ''} onChange={url => setEditing({ ...editing, image: url })} />
         </>
       )}
     />
@@ -878,7 +887,7 @@ function MarcheAdmin() {
 // --- École ---
 function EcoleAdmin() {
   const stored = useSettings();
-  type EcoleFields = Pick<SiteSettings, 'ecoleName' | 'ecoleAddress' | 'ecolePhone' | 'ecoleEmail' | 'ecoleEffectif' | 'ecoleHoraires' | 'ecolePeriscolaire' | 'ecoleCollegeLycee' | 'ecoleInscriptions'>;
+  type EcoleFields = Pick<SiteSettings, 'ecoleName' | 'ecoleAddress' | 'ecolePhone' | 'ecoleEmail' | 'ecoleEffectif' | 'ecoleHoraires' | 'ecolePeriscolaire' | 'ecoleCollegeLycee' | 'ecoleInscriptions' | 'ecoleImage'>;
   const [form, setForm] = useState<EcoleFields>(stored);
   const [saved, setSaved] = useState(false);
 
@@ -899,6 +908,7 @@ function EcoleAdmin() {
   return (
     <form onSubmit={submit} className="bg-white border border-gray-200 rounded-2xl p-5 space-y-3">
       <h2 className="font-bold text-gray-900 mb-1">École</h2>
+      <ImageField label="Photo de l'école (optionnel)" value={form.ecoleImage} onChange={url => { setForm({ ...form, ecoleImage: url }); setSaved(false); }} />
       <div className="grid grid-cols-2 gap-3">
         <Field label="Nom de l'école"><input className={inputCls} {...field('ecoleName')} /></Field>
         <Field label="Adresse"><input className={inputCls} {...field('ecoleAddress')} /></Field>
@@ -925,123 +935,192 @@ function EcoleAdmin() {
 }
 
 // --- Vie municipale (conseil, commissions, délibérations, tableau d'affichage) ---
-function VieMunicipaleAdmin() {
+function ConseilAdmin() {
   const council = useCouncil();
+  return (
+    <ListEditor<CouncilMember>
+      title="Conseil municipal"
+      items={council}
+      onSave={saveCouncil}
+      onReset={resetCouncil}
+      confirmLabel="ce membre du conseil"
+      makeNew={() => ({ id: newId(), name: '', role: 'Conseiller municipal', commission: '' })}
+      rowLabel={m => m.name}
+      rowSub={m => m.role}
+      formTitle={isNew => isNew ? 'Nouveau membre' : 'Modifier le membre'}
+      renderForm={(editing, setEditing) => (
+        <>
+          <Field label="Nom">
+            <input required className={inputCls} value={editing.name} onChange={e => setEditing({ ...editing, name: e.target.value })} />
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Fonction">
+              <input required className={inputCls} value={editing.role} onChange={e => setEditing({ ...editing, role: e.target.value })} />
+            </Field>
+            <Field label="Commission (optionnel)">
+              <input className={inputCls} value={editing.commission ?? ''} onChange={e => setEditing({ ...editing, commission: e.target.value })} />
+            </Field>
+          </div>
+        </>
+      )}
+    />
+  );
+}
+
+function CommissionsAdmin() {
   const commissions = useCommissions();
+  return (
+    <ListEditor<Commission>
+      title="Commissions"
+      items={commissions}
+      onSave={saveCommissions}
+      onReset={resetCommissions}
+      confirmLabel="cette commission"
+      makeNew={() => ({ id: newId(), name: '', president: '', members: '' })}
+      rowLabel={c => c.name}
+      rowSub={c => `Présidée par ${c.president}`}
+      formTitle={isNew => isNew ? 'Nouvelle commission' : 'Modifier la commission'}
+      renderForm={(editing, setEditing) => (
+        <>
+          <Field label="Nom">
+            <input required className={inputCls} value={editing.name} onChange={e => setEditing({ ...editing, name: e.target.value })} />
+          </Field>
+          <Field label="Président(e)">
+            <input required className={inputCls} value={editing.president} onChange={e => setEditing({ ...editing, president: e.target.value })} />
+          </Field>
+          <Field label="Membres (séparés par des virgules)">
+            <input className={inputCls} value={editing.members} onChange={e => setEditing({ ...editing, members: e.target.value })} />
+          </Field>
+        </>
+      )}
+    />
+  );
+}
+
+function DeliberationsAdmin() {
   const deliberations = useDeliberations();
+  return (
+    <ListEditor<Deliberation>
+      title="Délibérations"
+      items={deliberations}
+      onSave={saveDeliberations}
+      onReset={resetDeliberations}
+      confirmLabel="cette délibération"
+      makeNew={() => ({ id: newId(), ref: '', date: new Date().toLocaleDateString('fr-FR'), objet: '', vote: 'Unanimité' })}
+      rowLabel={d => d.objet}
+      rowSub={d => `${d.ref} · ${d.date}`}
+      formTitle={isNew => isNew ? 'Nouvelle délibération' : 'Modifier la délibération'}
+      renderForm={(editing, setEditing) => (
+        <>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Référence">
+              <input required className={inputCls} value={editing.ref} onChange={e => setEditing({ ...editing, ref: e.target.value })} />
+            </Field>
+            <Field label="Date (jj/mm/aaaa)">
+              <input required className={inputCls} value={editing.date} onChange={e => setEditing({ ...editing, date: e.target.value })} />
+            </Field>
+          </div>
+          <Field label="Objet">
+            <input required className={inputCls} value={editing.objet} onChange={e => setEditing({ ...editing, objet: e.target.value })} />
+          </Field>
+          <Field label="Résultat du vote">
+            <input required className={inputCls} value={editing.vote} onChange={e => setEditing({ ...editing, vote: e.target.value })} />
+          </Field>
+        </>
+      )}
+    />
+  );
+}
+
+const AFFICHAGE_TYPE_COLORS: Record<string, string> = {
+  'Arrêté': 'bg-blue-100 text-blue-700',
+  'Recrutement': 'bg-green-100 text-green-700',
+  'Enquête publique': 'bg-amber-100 text-amber-700',
+};
+
+function AffichageAdmin() {
   const affichage = useAffichage();
+  return (
+    <ListEditor<AffichageItem>
+      title="Tableau d'affichage"
+      items={affichage}
+      onSave={saveAffichage}
+      onReset={resetAffichage}
+      confirmLabel="cet avis"
+      makeNew={() => ({ id: newId(), date: new Date().toLocaleDateString('fr-FR'), titre: '', type: 'Arrêté' })}
+      rowLabel={a => a.titre}
+      rowSub={a => `${a.type} · ${a.date}`}
+      renderRow={a => (
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-gray-400 whitespace-nowrap flex-shrink-0">{a.date}</span>
+          <span className="text-sm font-medium text-gray-800 truncate flex-1">{a.titre}</span>
+          <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 font-medium ${AFFICHAGE_TYPE_COLORS[a.type] ?? 'bg-gray-100 text-gray-600'}`}>{a.type}</span>
+        </div>
+      )}
+      formTitle={isNew => isNew ? 'Nouvel avis' : 'Modifier l\'avis'}
+      renderForm={(editing, setEditing) => (
+        <>
+          <Field label="Titre">
+            <input required className={inputCls} value={editing.titre} onChange={e => setEditing({ ...editing, titre: e.target.value })} />
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Type">
+              <input required list="affichage-types" className={inputCls} value={editing.type} onChange={e => setEditing({ ...editing, type: e.target.value })} />
+              <datalist id="affichage-types">
+                {Object.keys(AFFICHAGE_TYPE_COLORS).map(t => <option key={t} value={t} />)}
+              </datalist>
+            </Field>
+            <Field label="Date (jj/mm/aaaa)">
+              <input required className={inputCls} value={editing.date} onChange={e => setEditing({ ...editing, date: e.target.value })} />
+            </Field>
+          </div>
+        </>
+      )}
+    />
+  );
+}
+
+// --- Documents filtrés par catégorie (réutilisé pour Bulletins, Comptes rendus, Formulaires/Urbanisme) ---
+function DocumentsCategoryAdmin({ categories, defaultCategory, title }: { categories: string[]; defaultCategory: string; title: string }) {
+  const allDocs = useDocuments();
+  const filtered = allDocs.filter(d => categories.includes(d.category));
+  const others = allDocs.filter(d => !categories.includes(d.category));
 
   return (
-    <div className="space-y-10">
-      <ListEditor<CouncilMember>
-        title="Conseil municipal"
-        items={council}
-        onSave={saveCouncil}
-        onReset={resetCouncil}
-        confirmLabel="ce membre du conseil"
-        makeNew={() => ({ id: newId(), name: '', role: 'Conseiller municipal', commission: '' })}
-        rowLabel={m => m.name}
-        rowSub={m => m.role}
-        formTitle={isNew => isNew ? 'Nouveau membre' : 'Modifier le membre'}
-        renderForm={(editing, setEditing) => (
-          <>
-            <Field label="Nom">
-              <input required className={inputCls} value={editing.name} onChange={e => setEditing({ ...editing, name: e.target.value })} />
+    <ListEditor<Document>
+      title={title}
+      items={filtered}
+      onSave={items => saveDocuments([...others, ...items])}
+      onReset={() => saveDocuments([...others, ...DOCUMENTS_DATA.filter(d => categories.includes(d.category))])}
+      confirmLabel="ce document"
+      makeNew={() => ({ id: newId(), title: '', fileUrl: '#', fileType: 'pdf', date: new Date().toISOString().slice(0, 10), category: defaultCategory })}
+      rowLabel={d => d.title}
+      rowSub={d => `${d.date}${d.size ? ' · ' + d.size : ''}`}
+      formTitle={isNew => isNew ? 'Nouveau document' : 'Modifier le document'}
+      renderForm={(editing, setEditing) => (
+        <>
+          <Field label="Titre">
+            <input required className={inputCls} value={editing.title} onChange={e => setEditing({ ...editing, title: e.target.value })} />
+          </Field>
+          <Field label="Lien du fichier (URL)">
+            <input required className={inputCls} value={editing.fileUrl} onChange={e => setEditing({ ...editing, fileUrl: e.target.value })} />
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Date">
+              <input required type="date" className={inputCls} value={editing.date} onChange={e => setEditing({ ...editing, date: e.target.value })} />
             </Field>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Fonction">
-                <input required className={inputCls} value={editing.role} onChange={e => setEditing({ ...editing, role: e.target.value })} />
-              </Field>
-              <Field label="Commission (optionnel)">
-                <input className={inputCls} value={editing.commission ?? ''} onChange={e => setEditing({ ...editing, commission: e.target.value })} />
-              </Field>
-            </div>
-          </>
-        )}
-      />
-
-      <ListEditor<Commission>
-        title="Commissions"
-        items={commissions}
-        onSave={saveCommissions}
-        onReset={resetCommissions}
-        confirmLabel="cette commission"
-        makeNew={() => ({ id: newId(), name: '', president: '', members: '' })}
-        rowLabel={c => c.name}
-        rowSub={c => `Présidée par ${c.president}`}
-        formTitle={isNew => isNew ? 'Nouvelle commission' : 'Modifier la commission'}
-        renderForm={(editing, setEditing) => (
-          <>
-            <Field label="Nom">
-              <input required className={inputCls} value={editing.name} onChange={e => setEditing({ ...editing, name: e.target.value })} />
+            <Field label="Taille (optionnel)">
+              <input className={inputCls} value={editing.size ?? ''} onChange={e => setEditing({ ...editing, size: e.target.value })} />
             </Field>
-            <Field label="Président(e)">
-              <input required className={inputCls} value={editing.president} onChange={e => setEditing({ ...editing, president: e.target.value })} />
+          </div>
+          {categories.length > 1 && (
+            <Field label="Catégorie">
+              <input required className={inputCls} value={editing.category} onChange={e => setEditing({ ...editing, category: e.target.value })} />
             </Field>
-            <Field label="Membres (séparés par des virgules)">
-              <input className={inputCls} value={editing.members} onChange={e => setEditing({ ...editing, members: e.target.value })} />
-            </Field>
-          </>
-        )}
-      />
-
-      <ListEditor<Deliberation>
-        title="Délibérations"
-        items={deliberations}
-        onSave={saveDeliberations}
-        onReset={resetDeliberations}
-        confirmLabel="cette délibération"
-        makeNew={() => ({ id: newId(), ref: '', date: new Date().toLocaleDateString('fr-FR'), objet: '', vote: 'Unanimité' })}
-        rowLabel={d => d.objet}
-        rowSub={d => `${d.ref} · ${d.date}`}
-        formTitle={isNew => isNew ? 'Nouvelle délibération' : 'Modifier la délibération'}
-        renderForm={(editing, setEditing) => (
-          <>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Référence">
-                <input required className={inputCls} value={editing.ref} onChange={e => setEditing({ ...editing, ref: e.target.value })} />
-              </Field>
-              <Field label="Date (jj/mm/aaaa)">
-                <input required className={inputCls} value={editing.date} onChange={e => setEditing({ ...editing, date: e.target.value })} />
-              </Field>
-            </div>
-            <Field label="Objet">
-              <input required className={inputCls} value={editing.objet} onChange={e => setEditing({ ...editing, objet: e.target.value })} />
-            </Field>
-            <Field label="Résultat du vote">
-              <input required className={inputCls} value={editing.vote} onChange={e => setEditing({ ...editing, vote: e.target.value })} />
-            </Field>
-          </>
-        )}
-      />
-
-      <ListEditor<AffichageItem>
-        title="Tableau d'affichage"
-        items={affichage}
-        onSave={saveAffichage}
-        onReset={resetAffichage}
-        confirmLabel="cet avis"
-        makeNew={() => ({ id: newId(), date: new Date().toLocaleDateString('fr-FR'), titre: '', type: 'Arrêté' })}
-        rowLabel={a => a.titre}
-        rowSub={a => `${a.type} · ${a.date}`}
-        formTitle={isNew => isNew ? 'Nouvel avis' : 'Modifier l\'avis'}
-        renderForm={(editing, setEditing) => (
-          <>
-            <Field label="Titre">
-              <input required className={inputCls} value={editing.titre} onChange={e => setEditing({ ...editing, titre: e.target.value })} />
-            </Field>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Type">
-                <input required className={inputCls} value={editing.type} onChange={e => setEditing({ ...editing, type: e.target.value })} />
-              </Field>
-              <Field label="Date (jj/mm/aaaa)">
-                <input required className={inputCls} value={editing.date} onChange={e => setEditing({ ...editing, date: e.target.value })} />
-              </Field>
-            </div>
-          </>
-        )}
-      />
-    </div>
+          )}
+        </>
+      )}
+    />
   );
 }
 
@@ -1412,10 +1491,14 @@ const GROUPS: Group[] = [
   {
     key: 'viemunicipale',
     label: 'Vie municipale',
-    hint: 'Page « Vie municipale »',
+    hint: 'Page « Vie municipale » — même ordre que les onglets de la page',
     tabs: [
-      { key: 'viemunicipale', label: 'Conseil, commissions, délibérations', render: () => <VieMunicipaleAdmin /> },
-      { key: 'documents', label: 'Documents (bulletins, comptes rendus…)', render: () => <DocumentsAdmin /> },
+      { key: 'conseil', label: 'Conseil municipal', render: () => <ConseilAdmin /> },
+      { key: 'commissions', label: 'Commissions', render: () => <CommissionsAdmin /> },
+      { key: 'bulletins', label: 'Bulletins', render: () => <DocumentsCategoryAdmin categories={['Bulletin']} defaultCategory="Bulletin" title="📰 Bulletins municipaux" /> },
+      { key: 'deliberations', label: 'Délibérations', render: () => <DeliberationsAdmin /> },
+      { key: 'comptes-rendus', label: 'Comptes rendus', render: () => <DocumentsCategoryAdmin categories={['Compte rendu']} defaultCategory="Compte rendu" title="📝 Comptes rendus des séances" /> },
+      { key: 'affichage', label: "Tableau d'affichage", render: () => <AffichageAdmin /> },
     ],
   },
   {
@@ -1424,7 +1507,7 @@ const GROUPS: Group[] = [
     hint: 'Page « Démarches »',
     tabs: [
       { key: 'demarches', label: 'Catégories & questions', render: () => <DemarchesAdminV2 /> },
-      { key: 'demarches-docs', label: 'Documents (formulaires, urbanisme)', render: () => <DocumentsAdmin /> },
+      { key: 'demarches-docs', label: 'Documents (formulaires, urbanisme)', render: () => <DocumentsCategoryAdmin categories={['Formulaire', 'Urbanisme']} defaultCategory="Formulaire" title="📥 Formulaires & documents d'urbanisme" /> },
       { key: 'demarches-prefecture', label: 'Services préfectoraux', render: () => <PrefectureAdmin /> },
     ],
   },

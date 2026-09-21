@@ -412,6 +412,7 @@ Centre de loisirs : pendant les vacances scolaires`;
 export const ECOLE_COLLEGE_LYCEE = `Collège : Marcel-Pagnol – 5 km (car scolaire)
 Lycée : Établissement de la ville voisine – 15 km`;
 export const ECOLE_INSCRIPTIONS = 'En mairie : livret de famille + justificatif de domicile + carnet de santé.';
+export const ECOLE_IMAGE = 'https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=600&q=80';
 
 export const HOME_LIENS_UTILES: LienUtile[] = [
   { id: '1', label: 'Service-Public.fr', url: 'https://www.service-public.fr' },

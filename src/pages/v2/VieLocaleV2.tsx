@@ -25,6 +25,9 @@ export default function VieLocaleV2() {
         <h2 id="ecole-title" className="text-xl font-bold text-blue-700 mb-5">🏫 École</h2>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-blue-50 border border-blue-100 rounded-xl p-5">
+            {settings.ecoleImage && (
+              <img src={settings.ecoleImage} alt={settings.ecoleName} className="w-full h-36 object-cover rounded-lg mb-4" loading="lazy" />
+            )}
             <h3 className="font-bold text-blue-900 text-base mb-3">{settings.ecoleName}</h3>
             <dl className="space-y-2 text-sm text-gray-700">
               {[
@@ -89,13 +92,16 @@ export default function VieLocaleV2() {
         <h2 id="asso-title" className="text-xl font-bold text-blue-700 mb-4">❤️ Associations</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {associations.map(a => (
-            <div key={a.id} className="border border-gray-100 rounded-xl p-4 hover:border-blue-200 transition-colors">
-              <div className="flex items-start justify-between mb-2">
-                <h3 className="font-bold text-gray-900 text-sm">{a.name}</h3>
-                <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ml-1 ${CAT_COLORS[a.category] ?? 'bg-gray-100 text-gray-600'}`}>{a.category}</span>
+            <div key={a.id} className="border border-gray-100 rounded-xl overflow-hidden hover:border-blue-200 transition-colors">
+              {a.image && <img src={a.image} alt="" className="w-full h-28 object-cover" loading="lazy" />}
+              <div className="p-4">
+                <div className="flex items-start justify-between mb-2">
+                  <h3 className="font-bold text-gray-900 text-sm">{a.name}</h3>
+                  <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ml-1 ${CAT_COLORS[a.category] ?? 'bg-gray-100 text-gray-600'}`}>{a.category}</span>
+                </div>
+                <p className="text-gray-500 text-xs mb-2">{a.description}</p>
+                {a.email && <a href={`mailto:${a.email}`} className="text-xs text-blue-600 hover:underline">✉️ {a.email}</a>}
               </div>
-              <p className="text-gray-500 text-xs mb-2">{a.description}</p>
-              {a.email && <a href={`mailto:${a.email}`} className="text-xs text-blue-600 hover:underline">✉️ {a.email}</a>}
             </div>
           ))}
         </div>
@@ -106,13 +112,16 @@ export default function VieLocaleV2() {
         <h2 id="comm-title" className="text-xl font-bold text-blue-700 mb-4">🏪 Commerces &amp; Entreprises locales</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {commerces.map(c => (
-            <div key={c.id} className="border border-gray-100 rounded-xl p-4">
-              <div className="flex items-start justify-between mb-1">
-                <h3 className="font-bold text-gray-900 text-sm">{c.name}</h3>
-                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full flex-shrink-0 ml-1">{c.type}</span>
+            <div key={c.id} className="border border-gray-100 rounded-xl overflow-hidden flex gap-3">
+              {c.image && <img src={c.image} alt="" className="w-24 h-24 object-cover flex-shrink-0" loading="lazy" />}
+              <div className="p-4 pl-0 first:pl-4 min-w-0">
+                <div className="flex items-start justify-between mb-1">
+                  <h3 className="font-bold text-gray-900 text-sm">{c.name}</h3>
+                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full flex-shrink-0 ml-1">{c.type}</span>
+                </div>
+                <p className="text-gray-400 text-xs mb-1">🕐 {c.horaires}</p>
+                <a href={`tel:${c.phone}`} className="text-xs text-blue-600 hover:underline">📞 {c.phone}</a>
               </div>
-              <p className="text-gray-400 text-xs mb-1">🕐 {c.horaires}</p>
-              <a href={`tel:${c.phone}`} className="text-xs text-blue-600 hover:underline">📞 {c.phone}</a>
             </div>
           ))}
         </div>

@@ -48,6 +48,7 @@ export interface Association {
   email?: string;
   website?: string;
   category: string;
+  image?: string;
 }
 
 export interface NavItem {
@@ -69,6 +70,7 @@ export interface Commerce {
   type: string;
   horaires: string;
   phone?: string;
+  image?: string;
 }
 
 export interface PointCarte {
@@ -228,6 +230,7 @@ export interface SiteSettings {
   ecolePeriscolaire: string;
   ecoleCollegeLycee: string;
   ecoleInscriptions: string;
+  ecoleImage: string;
   intercoName: string;
   intercoIntro: string;
   intercoChiffres: string;
