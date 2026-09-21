@@ -45,6 +45,24 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 
 const inputCls = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
 
+/** Barre d'enregistrement fixée en bas de l'écran : un seul bouton, toujours au même endroit,
+ * visible même en scrollant. Comme un seul formulaire "paramètres" est monté à la fois (un onglet
+ * à la fois), ça donne l'effet d'un unique bouton global sans avoir besoin d'état partagé entre
+ * composants — chaque formulaire fixe simplement sa propre barre au même endroit de l'écran. */
+const saveBarCls = 'fixed bottom-0 inset-x-0 z-30 bg-white/95 backdrop-blur border-t border-gray-200 shadow-[0_-4px_12px_rgba(0,0,0,0.08)]';
+const saveBarInnerCls = 'max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center gap-3';
+
+function SaveBar({ dirty, label = 'Enregistrer' }: { dirty: boolean; label?: string }) {
+  return (
+    <div className={saveBarCls}>
+      <div className={saveBarInnerCls}>
+        <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-5 py-2.5 rounded-lg">{label}</button>
+        <SaveStatus dirty={dirty} />
+      </div>
+    </div>
+  );
+}
+
 /** Avertit via la boîte de dialogue native du navigateur si on quitte/recharge la page avec des modifications non enregistrées. */
 function useUnsavedWarning(dirty: boolean) {
   useEffect(() => {
@@ -206,10 +224,7 @@ function CategoriesAdmin() {
           <textarea rows={6} className={inputCls} value={eventsText} onChange={e => { setEventsText(e.target.value); setDirty(true); }} />
         </Field>
       </div>
-      <div className="flex items-center gap-3">
-        <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-5 py-2.5 rounded-lg">Enregistrer</button>
-        <SaveStatus dirty={dirty} />
-      </div>
+      <SaveBar dirty={dirty} />
     </form>
   );
 }
@@ -504,10 +519,7 @@ function AccueilBandeauAdmin() {
       <Field label="Sous-titre">
         <input className={inputCls} value={form.homeHeroSubtitle} onChange={e => { setForm({ ...form, homeHeroSubtitle: e.target.value }); setDirty(true); }} />
       </Field>
-      <div className="flex items-center gap-3">
-        <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">Enregistrer</button>
-        <SaveStatus dirty={dirty} />
-      </div>
+      <SaveBar dirty={dirty} />
     </form>
   );
 }
@@ -564,10 +576,7 @@ function MotDuMaireAdmin() {
       <Field label="Message">
         <textarea rows={6} className={inputCls} value={form.mayorMessage} onChange={e => { setForm({ ...form, mayorMessage: e.target.value }); setDirty(true); }} />
       </Field>
-      <div className="flex items-center gap-3">
-        <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">Enregistrer</button>
-        <SaveStatus dirty={dirty} />
-      </div>
+      <SaveBar dirty={dirty} />
     </form>
   );
 }
@@ -626,10 +635,7 @@ function InfosPratiquesAdmin() {
           <Field label="Facebook (URL)"><input className={inputCls} {...field('facebookUrl')} /></Field>
           <Field label="IntraMuros (URL)"><input className={inputCls} {...field('intramurosUrl')} /></Field>
         </div>
-        <div className="flex items-center gap-3">
-          <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">Enregistrer</button>
-          <SaveStatus dirty={dirty} />
-        </div>
+        <SaveBar dirty={dirty} />
       </form>
 
       <ListEditor<LienUtile>
@@ -702,10 +708,7 @@ function DecouvrirAdmin() {
           </Field>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">Enregistrer les textes</button>
-          <SaveStatus dirty={dirty} />
-        </div>
+        <SaveBar dirty={dirty} />
       </form>
 
       <ListEditor<TimelineEvent>
@@ -774,10 +777,6 @@ function DecouvrirAdmin() {
         <Field label="Sentiers balisés (une ligne par sentier)">
           <textarea rows={3} className={inputCls} {...field('forestSentiers')} />
         </Field>
-        <div className="flex items-center gap-3">
-          <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">Enregistrer</button>
-          <SaveStatus dirty={dirty} />
-        </div>
       </form>
 
       <ListEditor<EtangInfo>
@@ -863,10 +862,7 @@ function MarcheAdmin() {
         <Field label="Téléphone food truck"><input className={inputCls} {...field('foodtruckPhone')} /></Field>
       </div>
       <Field label="Description food truck"><input className={inputCls} {...field('foodtruckDescription')} /></Field>
-      <div className="flex items-center gap-3">
-        <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">Enregistrer</button>
-        <SaveStatus dirty={dirty} />
-      </div>
+      <SaveBar dirty={dirty} />
     </form>
   );
 }
@@ -914,10 +910,7 @@ function EcoleAdmin() {
       <Field label="Inscriptions scolaires">
         <input className={inputCls} {...field('ecoleInscriptions')} />
       </Field>
-      <div className="flex items-center gap-3">
-        <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">Enregistrer</button>
-        <SaveStatus dirty={dirty} />
-      </div>
+      <SaveBar dirty={dirty} />
     </form>
   );
 }
@@ -1142,10 +1135,7 @@ function IntercommunaliteAdmin() {
         <Field label="Chiffres clés">
           <input className={inputCls} value={form.intercoChiffres} onChange={e => { setForm({ ...form, intercoChiffres: e.target.value }); setDirty(true); }} />
         </Field>
-        <div className="flex items-center gap-3">
-          <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">Enregistrer</button>
-          <SaveStatus dirty={dirty} />
-        </div>
+        <SaveBar dirty={dirty} />
       </form>
 
       <ListEditor<IntercoDelegue>
@@ -1328,10 +1318,7 @@ function ContactSubjectsAdmin() {
         <Field label="Un sujet par ligne">
           <textarea rows={8} className={inputCls} value={text} onChange={e => { setText(e.target.value); setDirty(true); }} />
         </Field>
-        <div className="flex items-center gap-3">
-          <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">Enregistrer</button>
-          <SaveStatus dirty={dirty} />
-        </div>
+        <SaveBar dirty={dirty} />
       </form>
     </div>
   );
@@ -1390,10 +1377,7 @@ function SettingsAdmin() {
         </div>
       </fieldset>
 
-      <div className="flex items-center gap-3">
-        <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-5 py-2.5 rounded-lg">Enregistrer</button>
-        <SaveStatus dirty={dirty} />
-      </div>
+      <SaveBar dirty={dirty} />
     </form>
   );
 }
@@ -1559,7 +1543,7 @@ export default function AdminV2() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 pb-24">
       <ToastHost />
       <div className="bg-blue-600 text-white rounded-2xl p-8 mb-6 flex items-start justify-between gap-4">
         <div>
