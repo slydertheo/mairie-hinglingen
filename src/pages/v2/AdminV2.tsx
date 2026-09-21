@@ -490,12 +490,11 @@ function PointsAdmin() {
   );
 }
 
-// --- Accueil : Bandeau + vignettes « Découvrir » ---
+// --- Accueil : Bandeau (hero) ---
 function AccueilBandeauAdmin() {
   const stored = useSettings();
   const [form, setForm] = useState<Pick<SiteSettings, 'homeHeroImage' | 'homeHeroTitle' | 'homeHeroSubtitle'>>(stored);
   const [saved, setSaved] = useState(false);
-  const vignettes = useDecouvrirVignettes();
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
@@ -504,45 +503,50 @@ function AccueilBandeauAdmin() {
   };
 
   return (
-    <div className="space-y-8">
-      <form onSubmit={submit} className="bg-white border border-gray-200 rounded-2xl p-5 space-y-3">
-        <h2 className="font-bold text-gray-900">Bandeau d'accueil (hero)</h2>
-        <ImageField label="Photo de fond" value={form.homeHeroImage} onChange={url => { setForm({ ...form, homeHeroImage: url }); setSaved(false); }} />
-        <Field label="Titre">
-          <input className={inputCls} value={form.homeHeroTitle} onChange={e => { setForm({ ...form, homeHeroTitle: e.target.value }); setSaved(false); }} />
-        </Field>
-        <Field label="Sous-titre">
-          <input className={inputCls} value={form.homeHeroSubtitle} onChange={e => { setForm({ ...form, homeHeroSubtitle: e.target.value }); setSaved(false); }} />
-        </Field>
-        <div className="flex items-center gap-3">
-          <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">Enregistrer</button>
-          {saved && <span className="text-xs text-green-600 font-medium">Enregistré ✓</span>}
-        </div>
-      </form>
+    <form onSubmit={submit} className="bg-white border border-gray-200 rounded-2xl p-5 space-y-3">
+      <h2 className="font-bold text-gray-900">Bandeau d'accueil (hero)</h2>
+      <ImageField label="Photo de fond" value={form.homeHeroImage} onChange={url => { setForm({ ...form, homeHeroImage: url }); setSaved(false); }} />
+      <Field label="Titre">
+        <input className={inputCls} value={form.homeHeroTitle} onChange={e => { setForm({ ...form, homeHeroTitle: e.target.value }); setSaved(false); }} />
+      </Field>
+      <Field label="Sous-titre">
+        <input className={inputCls} value={form.homeHeroSubtitle} onChange={e => { setForm({ ...form, homeHeroSubtitle: e.target.value }); setSaved(false); }} />
+      </Field>
+      <div className="flex items-center gap-3">
+        <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">Enregistrer</button>
+        {saved && <span className="text-xs text-green-600 font-medium">Enregistré ✓</span>}
+      </div>
+    </form>
+  );
+}
 
-      <ListEditor<DecouvrirVignette>
-        title="🌿 Vignettes « Découvrir Hindlingen »"
-        items={vignettes}
-        onSave={saveDecouvrirVignettes}
-        onReset={resetDecouvrirVignettes}
-        confirmLabel="cette vignette"
-        makeNew={() => ({ id: newId(), title: '', img: '', href: '/decouvrir' })}
-        rowLabel={v => v.title}
-        rowSub={v => v.href}
-        formTitle={isNew => isNew ? 'Nouvelle vignette' : 'Modifier la vignette'}
-        renderForm={(editing, setEditing) => (
-          <>
-            <Field label="Titre">
-              <input required className={inputCls} value={editing.title} onChange={e => setEditing({ ...editing, title: e.target.value })} />
-            </Field>
-            <ImageField label="Image" value={editing.img} onChange={url => setEditing({ ...editing, img: url })} />
-            <Field label="Lien (page + ancre)">
-              <input required className={inputCls} value={editing.href} onChange={e => setEditing({ ...editing, href: e.target.value })} />
-            </Field>
-          </>
-        )}
-      />
-    </div>
+// --- Accueil : vignettes « Découvrir Hindlingen » (section après le Mot du Maire) ---
+function AccueilDecouvrirAdmin() {
+  const vignettes = useDecouvrirVignettes();
+
+  return (
+    <ListEditor<DecouvrirVignette>
+      title="🌿 Vignettes « Découvrir Hindlingen »"
+      items={vignettes}
+      onSave={saveDecouvrirVignettes}
+      onReset={resetDecouvrirVignettes}
+      confirmLabel="cette vignette"
+      makeNew={() => ({ id: newId(), title: '', img: '', href: '/decouvrir' })}
+      rowLabel={v => v.title}
+      rowSub={v => v.href}
+      formTitle={isNew => isNew ? 'Nouvelle vignette' : 'Modifier la vignette'}
+      renderForm={(editing, setEditing) => (
+        <>
+          <Field label="Titre">
+            <input required className={inputCls} value={editing.title} onChange={e => setEditing({ ...editing, title: e.target.value })} />
+          </Field>
+          <ImageField label="Image" value={editing.img} onChange={url => setEditing({ ...editing, img: url })} />
+          <Field label="Lien (page + ancre)">
+            <input required className={inputCls} value={editing.href} onChange={e => setEditing({ ...editing, href: e.target.value })} />
+          </Field>
+        </>
+      )}
+    />
   );
 }
 
@@ -1325,10 +1329,11 @@ const GROUPS: Group[] = [
     label: 'Accueil',
     hint: 'Page « / » — les mêmes sections que tu vois sur la page d\'accueil, dans le même ordre',
     tabs: [
-      { key: 'accueil-bandeau', label: 'Bandeau & Découvrir Hindlingen', render: () => <AccueilBandeauAdmin /> },
+      { key: 'accueil-bandeau', label: 'Bandeau', render: () => <AccueilBandeauAdmin /> },
       { key: 'accueil-news', label: 'Actualités', render: () => <NewsAdmin /> },
       { key: 'accueil-events', label: 'Agenda', render: () => <EventsAdmin /> },
       { key: 'accueil-maire', label: 'Mot du Maire', render: () => <MotDuMaireAdmin /> },
+      { key: 'accueil-decouvrir', label: 'Découvrir Hindlingen', render: () => <AccueilDecouvrirAdmin /> },
       { key: 'accueil-infos', label: 'Infos pratiques', render: () => <InfosPratiquesAdmin /> },
       { key: 'accueil-docs', label: 'Téléchargements', render: () => <DocumentsAdmin /> },
     ],
