@@ -9,14 +9,14 @@ import type {
 import {
   useNews, useEvents, useDocuments, useAssociations, useCommerces, useCouncil, usePoints, useSettings,
   saveNews, saveEvents, saveDocuments, saveAssociations, saveCommerces, saveCouncil, savePoints, saveSettings,
-  resetNews, resetEvents, resetDocuments, resetAssociations, resetCommerces, resetCouncil, resetPoints, resetSettings,
+  resetNews, resetEvents, resetDocuments, resetAssociations, resetCommerces, resetCouncil, resetPoints,
   useGallery, usePatrimoine, useTimeline, useEtangs, useCommissions, useDeliberations, useAffichage,
   useDecouvrirVignettes, useIntercoDelegues, useIntercoCompetences, useIntercoLiens, useDemarches,
   saveGallery, savePatrimoine, saveTimeline, saveEtangs, saveCommissions, saveDeliberations, saveAffichage,
   saveDecouvrirVignettes, saveIntercoDelegues, saveIntercoCompetences, saveIntercoLiens, saveDemarches,
   resetGallery, resetPatrimoine, resetTimeline, resetEtangs, resetCommissions, resetDeliberations, resetAffichage,
   resetDecouvrirVignettes, resetIntercoDelegues, resetIntercoCompetences, resetIntercoLiens, resetDemarches,
-  DEFAULT_SETTINGS, login, getToken, clearToken,
+  login, getToken, clearToken,
 } from '../../lib/contentStore';
 import ImageField from '../../components/v2/ImageField';
 
@@ -487,8 +487,8 @@ function PointsAdmin() {
   );
 }
 
-// --- Accueil (hero + vignettes) ---
-function AccueilAdmin() {
+// --- Accueil : Bandeau + vignettes « Découvrir » ---
+function AccueilBandeauAdmin() {
   const stored = useSettings();
   const [form, setForm] = useState<Pick<SiteSettings, 'homeHeroImage' | 'homeHeroTitle' | 'homeHeroSubtitle'>>(stored);
   const [saved, setSaved] = useState(false);
@@ -518,7 +518,7 @@ function AccueilAdmin() {
       </form>
 
       <ListEditor<DecouvrirVignette>
-        title="Vignettes « Découvrir »"
+        title="🌿 Vignettes « Découvrir Hindlingen »"
         items={vignettes}
         onSave={saveDecouvrirVignettes}
         onReset={resetDecouvrirVignettes}
@@ -540,6 +540,93 @@ function AccueilAdmin() {
         )}
       />
     </div>
+  );
+}
+
+// --- Accueil : Mot du Maire ---
+function MotDuMaireAdmin() {
+  const stored = useSettings();
+  const [form, setForm] = useState<Pick<SiteSettings, 'mayorName' | 'mayorMessage'>>(stored);
+  const [saved, setSaved] = useState(false);
+
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    saveSettings({ ...stored, ...form });
+    setSaved(true);
+  };
+
+  return (
+    <form onSubmit={submit} className="bg-white border border-gray-200 rounded-2xl p-5 space-y-3">
+      <h2 className="font-bold text-gray-900">🏛️ Mot du Maire</h2>
+      <Field label="Nom du maire">
+        <input className={inputCls} value={form.mayorName} onChange={e => { setForm({ ...form, mayorName: e.target.value }); setSaved(false); }} />
+      </Field>
+      <Field label="Message">
+        <textarea rows={6} className={inputCls} value={form.mayorMessage} onChange={e => { setForm({ ...form, mayorMessage: e.target.value }); setSaved(false); }} />
+      </Field>
+      <div className="flex items-center gap-3">
+        <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">Enregistrer</button>
+        {saved && <span className="text-xs text-green-600 font-medium">Enregistré ✓</span>}
+      </div>
+    </form>
+  );
+}
+
+// --- Accueil : Infos pratiques (coordonnées, horaires, réseaux sociaux) ---
+function InfosPratiquesAdmin() {
+  const stored = useSettings();
+  type Fields = Pick<SiteSettings, 'mairieAddress' | 'mairieCity' | 'mairiePhone' | 'mairieEmail' | 'mairieHoraires' | 'facebookUrl' | 'intramurosUrl'>;
+  const [form, setForm] = useState<Fields>(stored);
+  const [saved, setSaved] = useState(false);
+
+  const field = (key: keyof Fields) => ({
+    value: form[key] as string,
+    onChange: (e: ChangeEvent<HTMLInputElement>) => {
+      setForm({ ...form, [key]: e.target.value });
+      setSaved(false);
+    },
+  });
+
+  const setHoraire = (idx: number, value: string) => {
+    const next = form.mairieHoraires.map((h, i) => (i === idx ? { ...h, horaires: value } : h));
+    setForm({ ...form, mairieHoraires: next });
+    setSaved(false);
+  };
+
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    saveSettings({ ...stored, ...form });
+    setSaved(true);
+  };
+
+  return (
+    <form onSubmit={submit} className="bg-white border border-gray-200 rounded-2xl p-5 space-y-3">
+      <h2 className="font-bold text-gray-900">ℹ️ Infos pratiques</h2>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Adresse"><input className={inputCls} {...field('mairieAddress')} /></Field>
+        <Field label="Ville"><input className={inputCls} {...field('mairieCity')} /></Field>
+        <Field label="Téléphone"><input className={inputCls} {...field('mairiePhone')} /></Field>
+        <Field label="Email"><input className={inputCls} {...field('mairieEmail')} /></Field>
+      </div>
+      <Field label="Horaires d'ouverture">
+        <div className="space-y-1.5">
+          {form.mairieHoraires.map((h, i) => (
+            <div key={h.jour} className="flex items-center gap-2">
+              <span className="w-24 text-xs text-gray-500 flex-shrink-0">{h.jour}</span>
+              <input className={inputCls} value={h.horaires} onChange={e => setHoraire(i, e.target.value)} />
+            </div>
+          ))}
+        </div>
+      </Field>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Facebook (URL)"><input className={inputCls} {...field('facebookUrl')} /></Field>
+        <Field label="IntraMuros (URL)"><input className={inputCls} {...field('intramurosUrl')} /></Field>
+      </div>
+      <div className="flex items-center gap-3">
+        <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">Enregistrer</button>
+        {saved && <span className="text-xs text-green-600 font-medium">Enregistré ✓</span>}
+      </div>
+    </form>
   );
 }
 
@@ -677,6 +764,51 @@ function DecouvrirAdmin() {
         )}
       />
     </div>
+  );
+}
+
+// --- Vie locale : Marché & camion à pizzas ---
+function MarcheAdmin() {
+  const stored = useSettings();
+  type Fields = Pick<SiteSettings, 'marketTitle' | 'marketSchedule' | 'marketLocation' | 'marketDescription' | 'foodtruckTitle' | 'foodtruckSchedule' | 'foodtruckLocation' | 'foodtruckPhone' | 'foodtruckDescription'>;
+  const [form, setForm] = useState<Fields>(stored);
+  const [saved, setSaved] = useState(false);
+
+  const field = (key: keyof Fields) => ({
+    value: form[key],
+    onChange: (e: ChangeEvent<HTMLInputElement>) => {
+      setForm({ ...form, [key]: e.target.value });
+      setSaved(false);
+    },
+  });
+
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    saveSettings({ ...stored, ...form });
+    setSaved(true);
+  };
+
+  return (
+    <form onSubmit={submit} className="bg-white border border-gray-200 rounded-2xl p-5 space-y-3">
+      <h2 className="font-bold text-gray-900">🛒 Marché &amp; 🍕 camion à pizzas</h2>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Titre du marché"><input className={inputCls} {...field('marketTitle')} /></Field>
+        <Field label="Horaires du marché"><input className={inputCls} {...field('marketSchedule')} /></Field>
+        <Field label="Lieu du marché"><input className={inputCls} {...field('marketLocation')} /></Field>
+        <Field label="Description du marché"><input className={inputCls} {...field('marketDescription')} /></Field>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Titre food truck"><input className={inputCls} {...field('foodtruckTitle')} /></Field>
+        <Field label="Horaires food truck"><input className={inputCls} {...field('foodtruckSchedule')} /></Field>
+        <Field label="Lieu food truck"><input className={inputCls} {...field('foodtruckLocation')} /></Field>
+        <Field label="Téléphone food truck"><input className={inputCls} {...field('foodtruckPhone')} /></Field>
+      </div>
+      <Field label="Description food truck"><input className={inputCls} {...field('foodtruckDescription')} /></Field>
+      <div className="flex items-center gap-3">
+        <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">Enregistrer</button>
+        {saved && <span className="text-xs text-green-600 font-medium">Enregistré ✓</span>}
+      </div>
+    </form>
   );
 }
 
@@ -1013,15 +1145,16 @@ function DemarchesAdminV2() {
   );
 }
 
-// --- Paramètres du site (fiche unique) ---
+// --- Identité de la commune (données utilisées sur plusieurs pages : Découvrir, carte, météo) ---
 function SettingsAdmin() {
   const stored = useSettings();
-  const [form, setForm] = useState<SiteSettings>(stored);
+  type Fields = Pick<SiteSettings, 'communeName' | 'communeShort' | 'communePostal' | 'communeCodeInsee' | 'communeDepartment' | 'communeRegion' | 'communePopulation' | 'communeSuperficie' | 'communeAltitude' | 'communeLat' | 'communeLng'>;
+  const [form, setForm] = useState<Fields>(stored);
   const [saved, setSaved] = useState(false);
 
-  const field = (key: keyof SiteSettings) => ({
+  const field = (key: keyof Fields) => ({
     value: form[key] as string,
-    onChange: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    onChange: (e: ChangeEvent<HTMLInputElement>) => {
       setForm({ ...form, [key]: e.target.value });
       setSaved(false);
     },
@@ -1029,18 +1162,16 @@ function SettingsAdmin() {
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    saveSettings(form);
+    saveSettings({ ...stored, ...form });
     setSaved(true);
-  };
-
-  const setHoraire = (idx: number, value: string) => {
-    const next = form.mairieHoraires.map((h, i) => (i === idx ? { ...h, horaires: value } : h));
-    setForm({ ...form, mairieHoraires: next });
-    setSaved(false);
   };
 
   return (
     <form onSubmit={submit} className="space-y-6">
+      <p className="text-xs text-gray-400">
+        Ces informations ne sont pas propres à une seule page : elles alimentent la page « Découvrir »,
+        la carte interactive et la météo locale.
+      </p>
       <fieldset className="bg-white border border-gray-200 rounded-2xl p-5 space-y-3">
         <legend className="font-bold text-gray-900 px-1">Commune</legend>
         <div className="grid grid-cols-2 gap-3">
@@ -1066,62 +1197,8 @@ function SettingsAdmin() {
         </div>
       </fieldset>
 
-      <fieldset className="bg-white border border-gray-200 rounded-2xl p-5 space-y-3">
-        <legend className="font-bold text-gray-900 px-1">Mairie</legend>
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Adresse"><input className={inputCls} {...field('mairieAddress')} /></Field>
-          <Field label="Ville"><input className={inputCls} {...field('mairieCity')} /></Field>
-          <Field label="Téléphone"><input className={inputCls} {...field('mairiePhone')} /></Field>
-          <Field label="Email"><input className={inputCls} {...field('mairieEmail')} /></Field>
-        </div>
-        <Field label="Horaires d'ouverture">
-          <div className="space-y-1.5">
-            {form.mairieHoraires.map((h, i) => (
-              <div key={h.jour} className="flex items-center gap-2">
-                <span className="w-24 text-xs text-gray-500 flex-shrink-0">{h.jour}</span>
-                <input className={inputCls} value={h.horaires} onChange={e => setHoraire(i, e.target.value)} />
-              </div>
-            ))}
-          </div>
-        </Field>
-      </fieldset>
-
-      <fieldset className="bg-white border border-gray-200 rounded-2xl p-5 space-y-3">
-        <legend className="font-bold text-gray-900 px-1">Maire</legend>
-        <Field label="Nom"><input className={inputCls} {...field('mayorName')} /></Field>
-        <Field label="Mot du maire"><textarea rows={5} className={inputCls} {...field('mayorMessage')} /></Field>
-      </fieldset>
-
-      <fieldset className="bg-white border border-gray-200 rounded-2xl p-5 space-y-3">
-        <legend className="font-bold text-gray-900 px-1">Réseaux sociaux</legend>
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Facebook (URL)"><input className={inputCls} {...field('facebookUrl')} /></Field>
-          <Field label="IntraMuros (URL)"><input className={inputCls} {...field('intramurosUrl')} /></Field>
-        </div>
-      </fieldset>
-
-      <fieldset className="bg-white border border-gray-200 rounded-2xl p-5 space-y-3">
-        <legend className="font-bold text-gray-900 px-1">Marché & camion à pizzas</legend>
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Titre du marché"><input className={inputCls} {...field('marketTitle')} /></Field>
-          <Field label="Horaires du marché"><input className={inputCls} {...field('marketSchedule')} /></Field>
-          <Field label="Lieu du marché"><input className={inputCls} {...field('marketLocation')} /></Field>
-          <Field label="Description du marché"><input className={inputCls} {...field('marketDescription')} /></Field>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Titre food truck"><input className={inputCls} {...field('foodtruckTitle')} /></Field>
-          <Field label="Horaires food truck"><input className={inputCls} {...field('foodtruckSchedule')} /></Field>
-          <Field label="Lieu food truck"><input className={inputCls} {...field('foodtruckLocation')} /></Field>
-          <Field label="Téléphone food truck"><input className={inputCls} {...field('foodtruckPhone')} /></Field>
-        </div>
-        <Field label="Description food truck"><input className={inputCls} {...field('foodtruckDescription')} /></Field>
-      </fieldset>
-
       <div className="flex items-center gap-3">
-        <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-5 py-2.5 rounded-lg">Enregistrer les paramètres</button>
-        <button type="button" onClick={() => { resetSettings(); setForm(DEFAULT_SETTINGS); }} className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-red-600">
-          <RotateCcw size={12} /> Réinitialiser
-        </button>
+        <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-5 py-2.5 rounded-lg">Enregistrer</button>
         {saved && <span className="text-xs text-green-600 font-medium">Enregistré ✓</span>}
       </div>
     </form>
@@ -1185,15 +1262,22 @@ interface Group {
 const GROUPS: Group[] = [
   {
     key: 'general',
-    label: 'Paramètres généraux',
-    hint: 'Infos commune, mairie, maire, réseaux sociaux, marché — utilisées un peu partout sur le site',
-    tabs: [{ key: 'settings', label: 'Commune, mairie & réseaux', render: () => <SettingsAdmin /> }],
+    label: 'Identité de la commune',
+    hint: 'Données générales utilisées sur plusieurs pages (Découvrir, carte, météo) — pas une page en particulier',
+    tabs: [{ key: 'settings', label: 'Commune (nom, population, coordonnées GPS…)', render: () => <SettingsAdmin /> }],
   },
   {
     key: 'accueil',
     label: 'Accueil',
-    hint: 'Page « / »',
-    tabs: [{ key: 'accueil', label: 'Bandeau & vignettes', render: () => <AccueilAdmin /> }],
+    hint: 'Page « / » — les mêmes sections que tu vois sur la page d\'accueil, dans le même ordre',
+    tabs: [
+      { key: 'accueil-bandeau', label: 'Bandeau & Découvrir Hindlingen', render: () => <AccueilBandeauAdmin /> },
+      { key: 'accueil-news', label: 'Actualités', render: () => <NewsAdmin /> },
+      { key: 'accueil-events', label: 'Agenda', render: () => <EventsAdmin /> },
+      { key: 'accueil-maire', label: 'Mot du Maire', render: () => <MotDuMaireAdmin /> },
+      { key: 'accueil-infos', label: 'Infos pratiques', render: () => <InfosPratiquesAdmin /> },
+      { key: 'accueil-docs', label: 'Téléchargements', render: () => <DocumentsAdmin /> },
+    ],
   },
   {
     key: 'decouvrir',
@@ -1222,6 +1306,7 @@ const GROUPS: Group[] = [
     hint: 'Page « Vie locale »',
     tabs: [
       { key: 'ecole', label: 'École', render: () => <EcoleAdmin /> },
+      { key: 'marche', label: 'Marché & food truck', render: () => <MarcheAdmin /> },
       { key: 'associations', label: 'Associations', render: () => <AssociationsAdmin /> },
       { key: 'commerces', label: 'Commerces & entreprises', render: () => <CommercesAdmin /> },
     ],
