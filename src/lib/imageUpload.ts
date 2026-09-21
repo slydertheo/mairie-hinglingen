@@ -1,8 +1,9 @@
 /**
- * Convertit un fichier image choisi sur l'ordinateur en data URL, en le redimensionnant
- * (les photos de smartphone peuvent faire plusieurs Mo, ce qui saturerait vite le quota localStorage).
+ * Redimensionne une image choisie sur l'ordinateur avant envoi au serveur (les photos de
+ * smartphone peuvent faire plusieurs Mo ; on les ramène à une taille raisonnable côté client
+ * pour économiser bande passante et espace disque serveur).
  */
-export function fileToResizedDataUrl(file: File, maxDim = 1600, quality = 0.82): Promise<string> {
+export function fileToResizedBlob(file: File, maxDim = 1600, quality = 0.82): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     const objectUrl = URL.createObjectURL(file);
@@ -24,7 +25,11 @@ export function fileToResizedDataUrl(file: File, maxDim = 1600, quality = 0.82):
         return;
       }
       ctx.drawImage(img, 0, 0, width, height);
-      resolve(canvas.toDataURL('image/jpeg', quality));
+      canvas.toBlob(
+        (blob) => (blob ? resolve(blob) : reject(new Error("Échec de l'encodage de l'image"))),
+        'image/jpeg',
+        quality
+      );
     };
     img.onerror = () => {
       URL.revokeObjectURL(objectUrl);

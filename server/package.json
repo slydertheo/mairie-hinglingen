@@ -1,0 +1,17 @@
+{
+  "name": "mairie-hinglingen-api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "API de contenu pour le site de la mairie (Postgres + upload d'images)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^2.0.0",
+    "pg": "^8.12.0"
+  }
+}

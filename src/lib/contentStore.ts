@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useReducer } from 'react';
 import type {
   NewsItem, EventItem, Document, Association, Commerce, CouncilMember, PointCarte, SiteSettings,
   GalleryImage, PatrimoineItem, TimelineEvent, EtangInfo, Commission, Deliberation, AffichageItem,
@@ -20,84 +20,110 @@ import {
 } from '../data';
 
 /**
- * Stockage de contenu éditable par la mairie, persisté dans le navigateur (localStorage).
- * Chaque collection stockée remplace entièrement le jeu de données par défaut dès qu'elle existe,
- * ce qui permet à l'agent municipal d'ajouter, modifier ou supprimer du contenu depuis /admin
- * sans toucher au code. C'est une solution "sans backend" adaptée à un budget très limité : les
- * modifications sont visibles sur le navigateur où elles ont été faites ; pour qu'elles soient
- * visibles par tous les visiteurs, il faudra brancher un petit backend plus tard (voir note dans /admin).
+ * Contenu éditable par la mairie, persisté côté serveur (API Express + Postgres, voir /server).
+ * Chaque "collection" correspond à une ligne de la table `content` (clé -> JSON), exactement comme
+ * avant avec localStorage — seule l'implémentation de stockage a changé, l'API de ce module
+ * (useNews, saveNews, useSettings, saveSettings…) reste identique pour le reste de l'appli.
+ * Un cache mémoire partagé + pub-sub évite de refaire une requête réseau par composant qui lit
+ * la même clé, et permet une mise à jour optimiste immédiate après une sauvegarde admin.
  */
 
-const CHANGE_EVENT = 'content-store-changed';
+const cache = new Map<string, unknown>();
+const inFlight = new Map<string, Promise<unknown>>();
+const listeners = new Map<string, Set<() => void>>();
 
-function notify() {
-  window.dispatchEvent(new Event(CHANGE_EVENT));
+function subscribe(key: string, cb: () => void) {
+  if (!listeners.has(key)) listeners.set(key, new Set());
+  listeners.get(key)!.add(cb);
+  return () => listeners.get(key)?.delete(cb);
 }
 
-function readValue<T>(key: string, fallback: T): T {
+function emit(key: string) {
+  listeners.get(key)?.forEach((cb) => cb());
+}
+
+async function fetchContent<T>(key: string): Promise<T | null> {
+  const res = await fetch(`/api/content/${key}`);
+  if (!res.ok) throw new Error(`GET /api/content/${key} → ${res.status}`);
+  const data = await res.json();
+  return (data?.value ?? null) as T | null;
+}
+
+function loadOnce<T>(key: string, fallback: T): Promise<T> {
+  if (inFlight.has(key)) return inFlight.get(key) as Promise<T>;
+  const p = fetchContent<T>(key)
+    .then((v) => v ?? fallback)
+    .catch(() => fallback)
+    .then((resolved) => {
+      cache.set(key, resolved);
+      inFlight.delete(key);
+      emit(key);
+      return resolved;
+    });
+  inFlight.set(key, p);
+  return p;
+}
+
+async function putContent<T>(key: string, value: T) {
+  // Mise à jour optimiste : l'UI admin réagit immédiatement, avant même la réponse réseau.
+  cache.set(key, value);
+  emit(key);
   try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return fallback;
-    return JSON.parse(raw) as T;
-  } catch {
-    return fallback;
+    const res = await fetch(`/api/content/${key}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}),
+      },
+      body: JSON.stringify({ value }),
+    });
+    if (!res.ok) throw new Error(`PUT /api/content/${key} → ${res.status}`);
+  } catch (err) {
+    console.error(`Échec de la sauvegarde de "${key}"`, err);
+    alert("La sauvegarde n'a pas pu être enregistrée sur le serveur. Vérifie ta connexion (ou reconnecte-toi dans l'espace mairie) puis réessaie.");
   }
 }
 
-function writeValue<T>(key: string, value: T) {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    // Stockage indisponible (navigation privée, quota…) : on ignore silencieusement.
-  }
-  notify();
-}
-
-function useStoredValue<T>(key: string, fallback: T): T {
-  const [value, setValue] = useState<T>(() => readValue(key, fallback));
+function useContent<T>(key: string, fallback: T): T {
+  const [, forceRender] = useReducer((n: number) => n + 1, 0);
 
   useEffect(() => {
-    const sync = () => setValue(readValue(key, fallback));
-    window.addEventListener(CHANGE_EVENT, sync);
-    window.addEventListener('storage', sync);
-    return () => {
-      window.removeEventListener(CHANGE_EVENT, sync);
-      window.removeEventListener('storage', sync);
-    };
+    if (!cache.has(key)) loadOnce(key, fallback);
+    return subscribe(key, forceRender);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 
-  return value;
+  return (cache.has(key) ? cache.get(key) : fallback) as T;
 }
 
-function createListStore<T>(key: string, fallback: T[]) {
+function createStore<T>(key: string, fallback: T) {
   return {
-    use: () => useStoredValue<T[]>(key, fallback),
-    get: () => readValue<T[]>(key, fallback),
-    save: (items: T[]) => writeValue(key, items),
-    reset: () => { localStorage.removeItem(key); notify(); },
+    use: () => useContent<T>(key, fallback),
+    get: () => (cache.has(key) ? (cache.get(key) as T) : fallback),
+    save: (value: T) => putContent(key, value),
+    reset: () => putContent(key, fallback),
   };
 }
 
-const newsStore = createListStore<NewsItem>('hindlingen_news_v1', NEWS_DATA);
-const eventsStore = createListStore<EventItem>('hindlingen_events_v1', EVENTS_DATA);
-const documentsStore = createListStore<Document>('hindlingen_documents_v1', DOCUMENTS_DATA);
-const associationsStore = createListStore<Association>('hindlingen_associations_v1', ASSOCIATIONS_DATA);
-const commercesStore = createListStore<Commerce>('hindlingen_commerces_v1', COMMERCES_DATA);
-const councilStore = createListStore<CouncilMember>('hindlingen_council_v1', COUNCIL_MEMBERS);
-const pointsStore = createListStore<PointCarte>('hindlingen_points_v1', POINTS_CARTE);
-const galleryStore = createListStore<GalleryImage>('hindlingen_gallery_v1', GALLERY_DATA);
-const patrimoineStore = createListStore<PatrimoineItem>('hindlingen_patrimoine_v1', PATRIMOINE_DATA);
-const timelineStore = createListStore<TimelineEvent>('hindlingen_timeline_v1', TIMELINE_DATA);
-const etangsStore = createListStore<EtangInfo>('hindlingen_etangs_v1', ETANGS_DATA);
-const commissionsStore = createListStore<Commission>('hindlingen_commissions_v1', COMMISSIONS_DATA);
-const deliberationsStore = createListStore<Deliberation>('hindlingen_deliberations_v1', DELIBERATIONS_DATA);
-const affichageStore = createListStore<AffichageItem>('hindlingen_affichage_v1', AFFICHAGE_DATA);
-const decouvrirVignettesStore = createListStore<DecouvrirVignette>('hindlingen_vignettes_v1', DECOUVRIR_VIGNETTES_DATA);
-const intercoDeleguesStore = createListStore<IntercoDelegue>('hindlingen_interco_delegues_v1', INTERCO_DELEGUES_DATA);
-const intercoCompetencesStore = createListStore<IntercoCompetence>('hindlingen_interco_competences_v1', INTERCO_COMPETENCES_DATA);
-const intercoLiensStore = createListStore<IntercoLien>('hindlingen_interco_liens_v1', INTERCO_LIENS_DATA);
-const demarchesStore = createListStore<DemarcheCategory>('hindlingen_demarches_v1', DEMARCHES_DATA);
+const newsStore = createStore<NewsItem[]>('news', NEWS_DATA);
+const eventsStore = createStore<EventItem[]>('events', EVENTS_DATA);
+const documentsStore = createStore<Document[]>('documents', DOCUMENTS_DATA);
+const associationsStore = createStore<Association[]>('associations', ASSOCIATIONS_DATA);
+const commercesStore = createStore<Commerce[]>('commerces', COMMERCES_DATA);
+const councilStore = createStore<CouncilMember[]>('council', COUNCIL_MEMBERS);
+const pointsStore = createStore<PointCarte[]>('points', POINTS_CARTE);
+const galleryStore = createStore<GalleryImage[]>('gallery', GALLERY_DATA);
+const patrimoineStore = createStore<PatrimoineItem[]>('patrimoine', PATRIMOINE_DATA);
+const timelineStore = createStore<TimelineEvent[]>('timeline', TIMELINE_DATA);
+const etangsStore = createStore<EtangInfo[]>('etangs', ETANGS_DATA);
+const commissionsStore = createStore<Commission[]>('commissions', COMMISSIONS_DATA);
+const deliberationsStore = createStore<Deliberation[]>('deliberations', DELIBERATIONS_DATA);
+const affichageStore = createStore<AffichageItem[]>('affichage', AFFICHAGE_DATA);
+const decouvrirVignettesStore = createStore<DecouvrirVignette[]>('vignettes', DECOUVRIR_VIGNETTES_DATA);
+const intercoDeleguesStore = createStore<IntercoDelegue[]>('interco_delegues', INTERCO_DELEGUES_DATA);
+const intercoCompetencesStore = createStore<IntercoCompetence[]>('interco_competences', INTERCO_COMPETENCES_DATA);
+const intercoLiensStore = createStore<IntercoLien[]>('interco_liens', INTERCO_LIENS_DATA);
+const demarchesStore = createStore<DemarcheCategory[]>('demarches', DEMARCHES_DATA);
 
 export const useNews = newsStore.use;
 export const getNews = newsStore.get;
@@ -196,8 +222,6 @@ export const resetDemarches = demarchesStore.reset;
 
 // --- Paramètres du site (objet unique) ---
 
-const SETTINGS_KEY = 'hindlingen_settings_v1';
-
 export const DEFAULT_SETTINGS: SiteSettings = {
   communeName: COMMUNE_NAME,
   communeShort: COMMUNE_SHORT,
@@ -251,19 +275,72 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   intercoChiffres: INTERCO_CHIFFRES,
 };
 
-export function useSettings(): SiteSettings {
-  return useStoredValue<SiteSettings>(SETTINGS_KEY, DEFAULT_SETTINGS);
+const settingsStore = createStore<SiteSettings>('settings', DEFAULT_SETTINGS);
+
+export const useSettings = settingsStore.use;
+export const getSettings = settingsStore.get;
+export const saveSettings = settingsStore.save;
+export const resetSettings = settingsStore.reset;
+
+// --- Authentification admin (token JWT renvoyé par l'API, gardé côté client) ---
+
+const TOKEN_KEY = 'hindlingen_admin_token';
+
+export function getToken(): string | null {
+  try {
+    return localStorage.getItem(TOKEN_KEY);
+  } catch {
+    return null;
+  }
 }
 
-export function getSettings(): SiteSettings {
-  return readValue<SiteSettings>(SETTINGS_KEY, DEFAULT_SETTINGS);
+function setToken(token: string) {
+  try {
+    localStorage.setItem(TOKEN_KEY, token);
+  } catch {
+    // Stockage indisponible (navigation privée…) : la session ne survivra pas au rechargement.
+  }
 }
 
-export function saveSettings(settings: SiteSettings) {
-  writeValue(SETTINGS_KEY, settings);
+export function clearToken() {
+  try {
+    localStorage.removeItem(TOKEN_KEY);
+  } catch {
+    // ignore
+  }
 }
 
-export function resetSettings() {
-  localStorage.removeItem(SETTINGS_KEY);
-  notify();
+export async function login(password: string): Promise<boolean> {
+  try {
+    const res = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password }),
+    });
+    if (!res.ok) return false;
+    const data = await res.json();
+    if (!data?.token) return false;
+    setToken(data.token);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// --- Upload d'images (retourne l'URL publique du fichier stocké côté serveur) ---
+
+export async function uploadImage(blob: Blob, filename: string): Promise<string> {
+  const form = new FormData();
+  form.append('file', blob, filename);
+  const res = await fetch('/api/upload', {
+    method: 'POST',
+    headers: getToken() ? { Authorization: `Bearer ${getToken()}` } : undefined,
+    body: form,
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body?.error || `Échec de l'upload (${res.status})`);
+  }
+  const data = await res.json();
+  return data.url as string;
 }

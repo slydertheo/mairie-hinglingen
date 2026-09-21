@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { Upload } from 'lucide-react';
-import { fileToResizedDataUrl } from '../../lib/imageUpload';
+import { fileToResizedBlob } from '../../lib/imageUpload';
+import { uploadImage } from '../../lib/contentStore';
 
 interface ImageFieldProps {
   label: string;
@@ -16,9 +17,11 @@ export default function ImageField({ label, value, onChange }: ImageFieldProps) 
     if (!file) return;
     setBusy(true);
     try {
-      onChange(await fileToResizedDataUrl(file));
-    } catch {
-      alert('Impossible de charger cette image.');
+      const blob = await fileToResizedBlob(file);
+      const url = await uploadImage(blob, file.name.replace(/\.[^.]+$/, '.jpg'));
+      onChange(url);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Impossible de charger cette image.');
     } finally {
       setBusy(false);
     }

@@ -16,12 +16,9 @@ import {
   saveDecouvrirVignettes, saveIntercoDelegues, saveIntercoCompetences, saveIntercoLiens, saveDemarches,
   resetGallery, resetPatrimoine, resetTimeline, resetEtangs, resetCommissions, resetDeliberations, resetAffichage,
   resetDecouvrirVignettes, resetIntercoDelegues, resetIntercoCompetences, resetIntercoLiens, resetDemarches,
-  DEFAULT_SETTINGS,
+  DEFAULT_SETTINGS, login, getToken, clearToken,
 } from '../../lib/contentStore';
 import ImageField from '../../components/v2/ImageField';
-
-const ADMIN_PASSPHRASE = 'hindlingen2026';
-const AUTH_KEY = 'hindlingen_admin_authed';
 
 function newId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -1134,11 +1131,14 @@ function SettingsAdmin() {
 function PasswordGate({ onSuccess }: { onSuccess: () => void }) {
   const [value, setValue] = useState('');
   const [error, setError] = useState(false);
+  const [checking, setChecking] = useState(false);
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
-    if (value === ADMIN_PASSPHRASE) {
-      sessionStorage.setItem(AUTH_KEY, '1');
+    setChecking(true);
+    const ok = await login(value);
+    setChecking(false);
+    if (ok) {
       onSuccess();
     } else {
       setError(true);
@@ -1160,7 +1160,9 @@ function PasswordGate({ onSuccess }: { onSuccess: () => void }) {
           autoFocus
         />
         {error && <p className="text-xs text-red-600 mt-2">Mot de passe incorrect.</p>}
-        <button type="submit" className="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg">Se connecter</button>
+        <button type="submit" disabled={checking} className="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg disabled:opacity-60">
+          {checking ? 'Vérification…' : 'Se connecter'}
+        </button>
       </form>
     </div>
   );
@@ -1248,7 +1250,7 @@ const GROUPS: Group[] = [
 ];
 
 export default function AdminV2() {
-  const [authed, setAuthed] = useState(() => sessionStorage.getItem(AUTH_KEY) === '1');
+  const [authed, setAuthed] = useState(() => getToken() !== null);
   const [groupKey, setGroupKey] = useState(GROUPS[0].key);
   const group = GROUPS.find(g => g.key === groupKey) ?? GROUPS[0];
   const [subKey, setSubKey] = useState(group.tabs[0].key);
@@ -1264,18 +1266,24 @@ export default function AdminV2() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      <div className="bg-blue-600 text-white rounded-2xl p-8 mb-6">
-        <h1 className="text-2xl font-bold mb-2">🔧 Espace mairie – Gestion du contenu</h1>
-        <p className="text-blue-100 text-sm">Tout ce qui apparaît sur le site se modifie ici, rangé page par page : textes, photos (upload depuis cet ordinateur), actualités, événements, documents et toutes les listes.</p>
+      <div className="bg-blue-600 text-white rounded-2xl p-8 mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold mb-2">🔧 Espace mairie – Gestion du contenu</h1>
+          <p className="text-blue-100 text-sm">Tout ce qui apparaît sur le site se modifie ici, rangé page par page : textes, photos (upload depuis cet ordinateur), actualités, événements, documents et toutes les listes.</p>
+        </div>
+        <button
+          onClick={() => { clearToken(); window.location.reload(); }}
+          className="flex-shrink-0 text-xs font-medium bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg whitespace-nowrap"
+        >
+          Se déconnecter
+        </button>
       </div>
 
-      <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl p-3 mb-6 text-xs">
+      <div className="flex items-start gap-2 bg-blue-50 border border-blue-100 text-blue-800 rounded-xl p-3 mb-6 text-xs">
         <AlertTriangle size={16} className="flex-shrink-0 mt-0.5" />
         <p>
-          Prototype de démonstration : les modifications (textes et photos) sont enregistrées dans ce navigateur
-          uniquement (elles ne sont pas encore visibles par les autres visiteurs), et les photos volumineuses
-          peuvent finir par saturer l'espace de stockage du navigateur. Pour une gestion partagée en production,
-          il faudra brancher un petit back-end — cette interface est conçue pour s'y connecter facilement.
+          Les modifications (textes et photos) sont enregistrées sur le serveur et visibles par tous les
+          visiteurs dès l'enregistrement.
         </p>
       </div>
 

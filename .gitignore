@@ -18,3 +18,7 @@ yarn-error.log*
 .env
 .env.local
 .env.*.local
+
+# Fichiers uploadés par l'admin (spécifiques à chaque déploiement)
+server/uploads/*
+!server/uploads/.gitkeep
