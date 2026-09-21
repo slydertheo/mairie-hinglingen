@@ -35,10 +35,8 @@ export default function CommuneV2() {
       <section className="bg-white border border-gray-200 rounded-2xl p-6 mb-6" aria-labelledby="pres-title">
         <h2 id="pres-title" className="text-xl font-bold text-blue-700 mb-4">📍 Présentation générale</h2>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-3 text-gray-600 text-sm leading-relaxed">
-            <p>{COMMUNE_SHORT} est une commune française située dans le département du {COMMUNE_DEPARTMENT}, en région Grand Est. Village alsacien au charme authentique du Sundgau, elle offre à ses habitants un cadre de vie exceptionnel alliant tradition et modernité.</p>
-            <p>La commune bénéficie d'une nature préservée avec ses forêts et ses étangs, paradis pour les amoureux de la nature, les randonneurs et les pêcheurs.</p>
-            <p>Sa vie associative dynamique et son marché hebdomadaire rythment agréablement la vie locale.</p>
+          <div className="lg:col-span-2 space-y-3 text-gray-600 text-sm leading-relaxed whitespace-pre-line">
+            {settings.communePresentation}
           </div>
           <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
             <h3 className="font-bold text-blue-900 mb-3 text-sm">📊 Données clés</h3>

@@ -1,13 +1,12 @@
 import { useState } from 'react';
 import { Send, CheckCircle, AlertCircle } from 'lucide-react';
-import { useSettings } from '../../lib/contentStore';
+import { useSettings, useContactSubjects } from '../../lib/contentStore';
 
 const MAP_DELTA = 0.01;
 
-const SUBJECTS = ['Renseignement général', 'État civil', 'Urbanisme', 'Voirie & travaux', 'Environnement', 'Associations', 'Autre demande'];
-
 export default function ContactV2() {
   const settings = useSettings();
+  const SUBJECTS = useContactSubjects();
   const { mairieAddress: MAIRIE_ADDRESS, mairieCity: MAIRIE_CITY, mairiePhone: MAIRIE_PHONE, mairieEmail: MAIRIE_EMAIL, mairieHoraires: MAIRIE_HORAIRES, communeShort: COMMUNE_SHORT, communeLat, communeLng } = settings;
   const MAP_BBOX = [communeLng - MAP_DELTA, communeLat - MAP_DELTA, communeLng + MAP_DELTA, communeLat + MAP_DELTA].join(',');
   const [form, setForm] = useState({ name: '', email: '', phone: '', subject: SUBJECTS[0], message: '' });

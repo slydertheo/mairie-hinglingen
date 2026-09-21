@@ -8,7 +8,7 @@ import {
   NEWS_DATA, EVENTS_DATA, DOCUMENTS_DATA, ASSOCIATIONS_DATA, COMMERCES_DATA, COUNCIL_MEMBERS, POINTS_CARTE,
   GALLERY_DATA, PATRIMOINE_DATA, TIMELINE_DATA, ETANGS_DATA, COMMISSIONS_DATA, DELIBERATIONS_DATA, AFFICHAGE_DATA,
   DECOUVRIR_VIGNETTES_DATA, INTERCO_DELEGUES_DATA, INTERCO_COMPETENCES_DATA, INTERCO_LIENS_DATA, DEMARCHES_DATA,
-  HOME_LIENS_UTILES, PREFECTURE_LIENS,
+  HOME_LIENS_UTILES, PREFECTURE_LIENS, COMMUNE_PRESENTATION, CONTACT_SUBJECTS,
   COMMUNE_NAME, COMMUNE_SHORT, COMMUNE_POSTAL, COMMUNE_DEPARTMENT, COMMUNE_REGION,
   COMMUNE_POPULATION, COMMUNE_SUPERFICIE, COMMUNE_ALTITUDE, COMMUNE_CODE_INSEE, COMMUNE_COORDS,
   MAIRIE_ADDRESS, MAIRIE_CITY, MAIRIE_PHONE, MAIRIE_EMAIL, MAIRIE_HORAIRES,
@@ -127,6 +127,7 @@ const intercoLiensStore = createStore<IntercoLien[]>('interco_liens', INTERCO_LI
 const demarchesStore = createStore<DemarcheCategory[]>('demarches', DEMARCHES_DATA);
 const homeLiensStore = createStore<LienUtile[]>('home_liens', HOME_LIENS_UTILES);
 const prefectureLiensStore = createStore<LienUtile[]>('prefecture_liens', PREFECTURE_LIENS);
+const contactSubjectsStore = createStore<string[]>('contact_subjects', CONTACT_SUBJECTS);
 
 export const useNews = newsStore.use;
 export const getNews = newsStore.get;
@@ -233,6 +234,11 @@ export const getPrefectureLiens = prefectureLiensStore.get;
 export const savePrefectureLiens = prefectureLiensStore.save;
 export const resetPrefectureLiens = prefectureLiensStore.reset;
 
+export const useContactSubjects = contactSubjectsStore.use;
+export const getContactSubjects = contactSubjectsStore.get;
+export const saveContactSubjects = contactSubjectsStore.save;
+export const resetContactSubjects = contactSubjectsStore.reset;
+
 // --- Paramètres du site (objet unique) ---
 
 export const DEFAULT_SETTINGS: SiteSettings = {
@@ -268,6 +274,7 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   homeHeroImage: HOME_HERO_IMAGE,
   homeHeroTitle: HOME_HERO_TITLE,
   homeHeroSubtitle: HOME_HERO_SUBTITLE,
+  communePresentation: COMMUNE_PRESENTATION,
   historiqueIntro: HISTORIQUE_INTRO,
   etangsIntro: ETANGS_INTRO,
   etangsImage: ETANGS_IMAGE,

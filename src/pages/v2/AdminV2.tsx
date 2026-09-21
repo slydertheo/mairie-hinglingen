@@ -12,10 +12,10 @@ import {
   resetNews, resetEvents, resetDocuments, resetAssociations, resetCommerces, resetCouncil, resetPoints,
   useGallery, usePatrimoine, useTimeline, useEtangs, useCommissions, useDeliberations, useAffichage,
   useDecouvrirVignettes, useIntercoDelegues, useIntercoCompetences, useIntercoLiens, useDemarches,
-  useHomeLiens, usePrefectureLiens,
+  useHomeLiens, usePrefectureLiens, useContactSubjects,
   saveGallery, savePatrimoine, saveTimeline, saveEtangs, saveCommissions, saveDeliberations, saveAffichage,
   saveDecouvrirVignettes, saveIntercoDelegues, saveIntercoCompetences, saveIntercoLiens, saveDemarches,
-  saveHomeLiens, savePrefectureLiens,
+  saveHomeLiens, savePrefectureLiens, saveContactSubjects,
   resetGallery, resetPatrimoine, resetTimeline, resetEtangs, resetCommissions, resetDeliberations, resetAffichage,
   resetDecouvrirVignettes, resetIntercoDelegues, resetIntercoCompetences, resetIntercoLiens, resetDemarches,
   resetHomeLiens, resetPrefectureLiens,
@@ -666,12 +666,21 @@ function InfosPratiquesAdmin() {
 // --- Découvrir (historique, patrimoine, étangs/forêts, galerie) ---
 function DecouvrirAdmin() {
   const stored = useSettings();
-  const [form, setForm] = useState<Pick<SiteSettings, 'historiqueIntro' | 'etangsIntro' | 'etangsImage' | 'forestIntro' | 'forestImage' | 'forestSentiers'>>(stored);
+  type Fields = Pick<SiteSettings, 'communePresentation' | 'historiqueIntro' | 'etangsIntro' | 'etangsImage' | 'forestIntro' | 'forestImage' | 'forestSentiers'>;
+  const [form, setForm] = useState<Fields>(stored);
   const [saved, setSaved] = useState(false);
   const timeline = useTimeline();
   const patrimoine = usePatrimoine();
   const etangs = useEtangs();
   const gallery = useGallery();
+
+  const field = (key: keyof Fields) => ({
+    value: form[key],
+    onChange: (e: ChangeEvent<HTMLTextAreaElement>) => {
+      setForm({ ...form, [key]: e.target.value });
+      setSaved(false);
+    },
+  });
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
@@ -681,24 +690,25 @@ function DecouvrirAdmin() {
 
   return (
     <div className="space-y-8">
-      <form onSubmit={submit} className="bg-white border border-gray-200 rounded-2xl p-5 space-y-3">
-        <h2 className="font-bold text-gray-900">Textes « Découvrir »</h2>
-        <Field label="Introduction historique">
-          <textarea rows={5} className={inputCls} value={form.historiqueIntro} onChange={e => { setForm({ ...form, historiqueIntro: e.target.value }); setSaved(false); }} />
-        </Field>
-        <Field label="Introduction étangs">
-          <textarea rows={2} className={inputCls} value={form.etangsIntro} onChange={e => { setForm({ ...form, etangsIntro: e.target.value }); setSaved(false); }} />
-        </Field>
-        <ImageField label="Photo des étangs" value={form.etangsImage} onChange={url => { setForm({ ...form, etangsImage: url }); setSaved(false); }} />
-        <Field label="Introduction forêt">
-          <textarea rows={2} className={inputCls} value={form.forestIntro} onChange={e => { setForm({ ...form, forestIntro: e.target.value }); setSaved(false); }} />
-        </Field>
-        <ImageField label="Photo de la forêt" value={form.forestImage} onChange={url => { setForm({ ...form, forestImage: url }); setSaved(false); }} />
-        <Field label="Sentiers balisés (une ligne par sentier)">
-          <textarea rows={3} className={inputCls} value={form.forestSentiers} onChange={e => { setForm({ ...form, forestSentiers: e.target.value }); setSaved(false); }} />
-        </Field>
+      <form onSubmit={submit} className="space-y-6">
+        {/* 1. Présentation générale */}
+        <div className="bg-white border border-gray-200 rounded-2xl p-5 space-y-3">
+          <h2 className="font-bold text-gray-900">📍 Présentation générale</h2>
+          <Field label="Texte de présentation">
+            <textarea rows={5} className={inputCls} {...field('communePresentation')} />
+          </Field>
+        </div>
+
+        {/* 2. Historique (texte, la frise est juste en dessous) */}
+        <div className="bg-white border border-gray-200 rounded-2xl p-5 space-y-3">
+          <h2 className="font-bold text-gray-900">📜 Historique</h2>
+          <Field label="Introduction historique">
+            <textarea rows={5} className={inputCls} {...field('historiqueIntro')} />
+          </Field>
+        </div>
+
         <div className="flex items-center gap-3">
-          <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">Enregistrer</button>
+          <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">Enregistrer les textes</button>
           {saved && <span className="text-xs text-green-600 font-medium">Enregistré ✓</span>}
         </div>
       </form>
@@ -754,6 +764,26 @@ function DecouvrirAdmin() {
           </>
         )}
       />
+
+      {/* 4. Étangs & Forêts (texte + photos), suivi de la liste des étangs juste en dessous */}
+      <form onSubmit={submit} className="bg-white border border-gray-200 rounded-2xl p-5 space-y-3">
+        <h2 className="font-bold text-gray-900">🌊 Étangs &amp; Forêts</h2>
+        <Field label="Introduction étangs">
+          <textarea rows={2} className={inputCls} {...field('etangsIntro')} />
+        </Field>
+        <ImageField label="Photo des étangs" value={form.etangsImage} onChange={url => { setForm({ ...form, etangsImage: url }); setSaved(false); }} />
+        <Field label="Introduction forêt">
+          <textarea rows={2} className={inputCls} {...field('forestIntro')} />
+        </Field>
+        <ImageField label="Photo de la forêt" value={form.forestImage} onChange={url => { setForm({ ...form, forestImage: url }); setSaved(false); }} />
+        <Field label="Sentiers balisés (une ligne par sentier)">
+          <textarea rows={3} className={inputCls} {...field('forestSentiers')} />
+        </Field>
+        <div className="flex items-center gap-3">
+          <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">Enregistrer</button>
+          {saved && <span className="text-xs text-green-600 font-medium">Enregistré ✓</span>}
+        </div>
+      </form>
 
       <ListEditor<EtangInfo>
         title="Étangs"
@@ -1130,7 +1160,6 @@ function IntercommunaliteAdmin() {
 // --- Démarches (catégories + questions/réponses) ---
 function DemarchesAdminV2() {
   const items = useDemarches();
-  const prefectureLiens = usePrefectureLiens();
 
   const itemsToText = (entries: DemarcheFaqEntry[]) => entries.map(e => `${e.q} :: ${e.a}`).join('\n');
   const textToItems = (text: string): DemarcheFaqEntry[] =>
@@ -1140,65 +1169,101 @@ function DemarchesAdminV2() {
     });
 
   return (
-    <div className="space-y-8">
-      <div>
-        <p className="text-xs text-gray-400 mb-4">
-          Une question par ligne, au format <code>Question :: Réponse</code>.
-        </p>
-        <ListEditor<DemarcheCategory>
-          title="Catégories de démarches"
-          items={items}
-          onSave={saveDemarches}
-          onReset={resetDemarches}
-          confirmLabel="cette catégorie"
-          makeNew={() => ({ id: newId(), emoji: '📋', title: '', items: [] })}
-          rowLabel={c => c.title}
-          rowSub={c => `${c.items.length} question(s)`}
-          formTitle={isNew => isNew ? 'Nouvelle catégorie' : 'Modifier la catégorie'}
-          renderForm={(editing, setEditing) => (
-            <>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Emoji">
-                  <input className={inputCls} value={editing.emoji} onChange={e => setEditing({ ...editing, emoji: e.target.value })} />
-                </Field>
-                <Field label="Titre">
-                  <input required className={inputCls} value={editing.title} onChange={e => setEditing({ ...editing, title: e.target.value })} />
-                </Field>
-              </div>
-              <Field label="Questions / réponses">
-                <textarea
-                  rows={6}
-                  className={inputCls}
-                  value={itemsToText(editing.items)}
-                  onChange={e => setEditing({ ...editing, items: textToItems(e.target.value) })}
-                />
-              </Field>
-            </>
-          )}
-        />
-      </div>
-
-      <ListEditor<LienUtile>
-        title="🏛️ Services préfectoraux"
-        items={prefectureLiens}
-        onSave={savePrefectureLiens}
-        onReset={resetPrefectureLiens}
-        confirmLabel="ce lien"
-        makeNew={() => ({ id: newId(), label: '', url: '' })}
-        rowLabel={l => l.label}
-        rowSub={l => l.url}
-        formTitle={isNew => isNew ? 'Nouveau lien' : 'Modifier le lien'}
+    <div>
+      <p className="text-xs text-gray-400 mb-4">
+        Une question par ligne, au format <code>Question :: Réponse</code>.
+      </p>
+      <ListEditor<DemarcheCategory>
+        title="Catégories de démarches"
+        items={items}
+        onSave={saveDemarches}
+        onReset={resetDemarches}
+        confirmLabel="cette catégorie"
+        makeNew={() => ({ id: newId(), emoji: '📋', title: '', items: [] })}
+        rowLabel={c => c.title}
+        rowSub={c => `${c.items.length} question(s)`}
+        formTitle={isNew => isNew ? 'Nouvelle catégorie' : 'Modifier la catégorie'}
         renderForm={(editing, setEditing) => (
           <>
-            <Field label="Libellé">
-              <input required className={inputCls} value={editing.label} onChange={e => setEditing({ ...editing, label: e.target.value })} />
-            </Field>
-            <Field label="URL">
-              <input required className={inputCls} value={editing.url} onChange={e => setEditing({ ...editing, url: e.target.value })} />
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Emoji">
+                <input className={inputCls} value={editing.emoji} onChange={e => setEditing({ ...editing, emoji: e.target.value })} />
+              </Field>
+              <Field label="Titre">
+                <input required className={inputCls} value={editing.title} onChange={e => setEditing({ ...editing, title: e.target.value })} />
+              </Field>
+            </div>
+            <Field label="Questions / réponses">
+              <textarea
+                rows={6}
+                className={inputCls}
+                value={itemsToText(editing.items)}
+                onChange={e => setEditing({ ...editing, items: textToItems(e.target.value) })}
+              />
             </Field>
           </>
         )}
       />
+    </div>
+  );
+}
+
+function PrefectureAdmin() {
+  const prefectureLiens = usePrefectureLiens();
+
+  return (
+    <ListEditor<LienUtile>
+      title="🏛️ Services préfectoraux"
+      items={prefectureLiens}
+      onSave={savePrefectureLiens}
+      onReset={resetPrefectureLiens}
+      confirmLabel="ce lien"
+      makeNew={() => ({ id: newId(), label: '', url: '' })}
+      rowLabel={l => l.label}
+      rowSub={l => l.url}
+      formTitle={isNew => isNew ? 'Nouveau lien' : 'Modifier le lien'}
+      renderForm={(editing, setEditing) => (
+        <>
+          <Field label="Libellé">
+            <input required className={inputCls} value={editing.label} onChange={e => setEditing({ ...editing, label: e.target.value })} />
+          </Field>
+          <Field label="URL">
+            <input required className={inputCls} value={editing.url} onChange={e => setEditing({ ...editing, url: e.target.value })} />
+          </Field>
+        </>
+      )}
+    />
+  );
+}
+
+// --- Contact : sujets du formulaire ---
+function ContactSubjectsAdmin() {
+  const subjects = useContactSubjects();
+  const [text, setText] = useState(() => subjects.join('\n'));
+  const [saved, setSaved] = useState(false);
+
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    saveContactSubjects(text.split('\n').map(l => l.trim()).filter(Boolean));
+    setSaved(true);
+  };
+
+  return (
+    <div className="space-y-4">
+      <p className="text-xs text-gray-400">
+        Les coordonnées, horaires et le plan d'accès de la page Contact se modifient dans le groupe
+        « Accueil » → onglet « Infos pratiques » (mêmes informations, affichées aux deux endroits).
+      </p>
+      <form onSubmit={submit} className="bg-white border border-gray-200 rounded-2xl p-5 space-y-3">
+        <h2 className="font-bold text-gray-900">✏️ Sujets du formulaire de contact</h2>
+        <Field label="Un sujet par ligne">
+          <textarea rows={8} className={inputCls} value={text} onChange={e => { setText(e.target.value); setSaved(false); }} />
+        </Field>
+        <div className="flex items-center gap-3">
+          <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">Enregistrer</button>
+          {saved && <span className="text-xs text-green-600 font-medium">Enregistré ✓</span>}
+        </div>
+      </form>
     </div>
   );
 }
@@ -1357,7 +1422,11 @@ const GROUPS: Group[] = [
     key: 'demarches',
     label: 'Démarches',
     hint: 'Page « Démarches »',
-    tabs: [{ key: 'demarches', label: 'Catégories & questions', render: () => <DemarchesAdminV2 /> }],
+    tabs: [
+      { key: 'demarches', label: 'Catégories & questions', render: () => <DemarchesAdminV2 /> },
+      { key: 'demarches-docs', label: 'Documents (formulaires, urbanisme)', render: () => <DocumentsAdmin /> },
+      { key: 'demarches-prefecture', label: 'Services préfectoraux', render: () => <PrefectureAdmin /> },
+    ],
   },
   {
     key: 'vielocale',
@@ -1390,6 +1459,12 @@ const GROUPS: Group[] = [
     label: 'Plan & carte',
     hint: 'Page « Plan & Carte »',
     tabs: [{ key: 'points', label: 'Lieux de la carte', render: () => <PointsAdmin /> }],
+  },
+  {
+    key: 'contact',
+    label: 'Contact',
+    hint: 'Page « Contact »',
+    tabs: [{ key: 'contact-subjects', label: 'Sujets du formulaire', render: () => <ContactSubjectsAdmin /> }],
   },
 ];
 

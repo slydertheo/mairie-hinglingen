@@ -212,6 +212,7 @@ export interface SiteSettings {
   homeHeroImage: string;
   homeHeroTitle: string;
   homeHeroSubtitle: string;
+  communePresentation: string;
   historiqueIntro: string;
   etangsIntro: string;
   etangsImage: string;

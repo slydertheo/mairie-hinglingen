@@ -368,6 +368,22 @@ export const HOME_HERO_IMAGE = 'https://images.unsplash.com/photo-1504711434969-
 export const HOME_HERO_TITLE = 'Bienvenue sur le site officiel de la Mairie de Hindlingen';
 export const HOME_HERO_SUBTITLE = 'Commune du Haut-Rhin – Sundgau – Grand Est';
 
+export const COMMUNE_PRESENTATION = `Hindlingen est une commune française située dans le département du Haut-Rhin, en région Grand Est. Village alsacien au charme authentique du Sundgau, elle offre à ses habitants un cadre de vie exceptionnel alliant tradition et modernité.
+
+La commune bénéficie d'une nature préservée avec ses forêts et ses étangs, paradis pour les amoureux de la nature, les randonneurs et les pêcheurs.
+
+Sa vie associative dynamique et son marché hebdomadaire rythment agréablement la vie locale.`;
+
+export const CONTACT_SUBJECTS = [
+  'Renseignement général',
+  'État civil',
+  'Urbanisme',
+  'Voirie & travaux',
+  'Environnement',
+  'Associations',
+  'Autre demande',
+];
+
 export const HISTORIQUE_INTRO = `Les premières traces d'occupation de Hindlingen remontent au Moyen Âge. Le village est mentionné pour la première fois dans des archives médiévales du XIIe siècle.
 
 Au fil des siècles, la commune a développé une activité agricole importante, avec la pisciculture autour des étangs et l'exploitation forestière.
