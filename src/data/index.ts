@@ -1,7 +1,7 @@
 import type {
   NewsItem, EventItem, CouncilMember, Document, Association, Commerce, PointCarte,
   GalleryImage, PatrimoineItem, TimelineEvent, EtangInfo, Commission, Deliberation, AffichageItem,
-  DecouvrirVignette, IntercoDelegue, IntercoCompetence, IntercoLien, DemarcheCategory,
+  DecouvrirVignette, IntercoDelegue, IntercoCompetence, IntercoLien, DemarcheCategory, LienUtile,
 } from '../types';
 
 export const COMMUNE_NAME = 'Mairie de Hindlingen';
@@ -396,6 +396,20 @@ Centre de loisirs : pendant les vacances scolaires`;
 export const ECOLE_COLLEGE_LYCEE = `Collège : Marcel-Pagnol – 5 km (car scolaire)
 Lycée : Établissement de la ville voisine – 15 km`;
 export const ECOLE_INSCRIPTIONS = 'En mairie : livret de famille + justificatif de domicile + carnet de santé.';
+
+export const HOME_LIENS_UTILES: LienUtile[] = [
+  { id: '1', label: 'Service-Public.fr', url: 'https://www.service-public.fr' },
+  { id: '2', label: 'Préfecture du Haut-Rhin', url: 'https://www.haut-rhin.gouv.fr' },
+  { id: '3', label: 'Région Grand Est', url: 'https://www.grandest.fr' },
+  { id: '4', label: 'impots.gouv.fr', url: 'https://www.impots.gouv.fr' },
+];
+
+export const PREFECTURE_LIENS: LienUtile[] = [
+  { id: '1', label: 'Carte d\'identité & Passeport', url: 'https://www.service-public.fr/particuliers/vosdroits/N360' },
+  { id: '2', label: 'Carte grise (immatriculation)', url: 'https://immatriculation.ants.gouv.fr' },
+  { id: '3', label: 'Permis de conduire', url: 'https://permisdeconduire.ants.gouv.fr' },
+  { id: '4', label: 'Préfecture du Haut-Rhin', url: 'https://www.haut-rhin.gouv.fr' },
+];
 
 export const INTERCO_NAME = 'Communauté de Communes du Pays de l\'Alsace Verte';
 export const INTERCO_INTRO = 'La commune exerce des compétences obligatoires transférées par les communes membres. Les délégués communautaires siègent au Conseil communautaire.';

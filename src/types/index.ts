@@ -166,6 +166,12 @@ export interface DemarcheFaqEntry {
   a: string;
 }
 
+export interface LienUtile {
+  id: string;
+  label: string;
+  url: string;
+}
+
 export interface DemarcheCategory {
   id: string;
   emoji: string;

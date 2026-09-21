@@ -4,7 +4,7 @@ import { Plus, Pencil, Trash2, X, AlertTriangle, RotateCcw } from 'lucide-react'
 import type {
   NewsItem, EventItem, Document, Association, Commerce, CouncilMember, PointCarte, SiteSettings,
   GalleryImage, PatrimoineItem, TimelineEvent, EtangInfo, Commission, Deliberation, AffichageItem,
-  DecouvrirVignette, IntercoDelegue, IntercoCompetence, IntercoLien, DemarcheCategory, DemarcheFaqEntry,
+  DecouvrirVignette, IntercoDelegue, IntercoCompetence, IntercoLien, DemarcheCategory, DemarcheFaqEntry, LienUtile,
 } from '../../types';
 import {
   useNews, useEvents, useDocuments, useAssociations, useCommerces, useCouncil, usePoints, useSettings,
@@ -12,10 +12,13 @@ import {
   resetNews, resetEvents, resetDocuments, resetAssociations, resetCommerces, resetCouncil, resetPoints,
   useGallery, usePatrimoine, useTimeline, useEtangs, useCommissions, useDeliberations, useAffichage,
   useDecouvrirVignettes, useIntercoDelegues, useIntercoCompetences, useIntercoLiens, useDemarches,
+  useHomeLiens, usePrefectureLiens,
   saveGallery, savePatrimoine, saveTimeline, saveEtangs, saveCommissions, saveDeliberations, saveAffichage,
   saveDecouvrirVignettes, saveIntercoDelegues, saveIntercoCompetences, saveIntercoLiens, saveDemarches,
+  saveHomeLiens, savePrefectureLiens,
   resetGallery, resetPatrimoine, resetTimeline, resetEtangs, resetCommissions, resetDeliberations, resetAffichage,
   resetDecouvrirVignettes, resetIntercoDelegues, resetIntercoCompetences, resetIntercoLiens, resetDemarches,
+  resetHomeLiens, resetPrefectureLiens,
   login, getToken, clearToken,
 } from '../../lib/contentStore';
 import ImageField from '../../components/v2/ImageField';
@@ -599,34 +602,60 @@ function InfosPratiquesAdmin() {
     setSaved(true);
   };
 
+  const homeLiens = useHomeLiens();
+
   return (
-    <form onSubmit={submit} className="bg-white border border-gray-200 rounded-2xl p-5 space-y-3">
-      <h2 className="font-bold text-gray-900">ℹ️ Infos pratiques</h2>
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="Adresse"><input className={inputCls} {...field('mairieAddress')} /></Field>
-        <Field label="Ville"><input className={inputCls} {...field('mairieCity')} /></Field>
-        <Field label="Téléphone"><input className={inputCls} {...field('mairiePhone')} /></Field>
-        <Field label="Email"><input className={inputCls} {...field('mairieEmail')} /></Field>
-      </div>
-      <Field label="Horaires d'ouverture">
-        <div className="space-y-1.5">
-          {form.mairieHoraires.map((h, i) => (
-            <div key={h.jour} className="flex items-center gap-2">
-              <span className="w-24 text-xs text-gray-500 flex-shrink-0">{h.jour}</span>
-              <input className={inputCls} value={h.horaires} onChange={e => setHoraire(i, e.target.value)} />
-            </div>
-          ))}
+    <div className="space-y-8">
+      <form onSubmit={submit} className="bg-white border border-gray-200 rounded-2xl p-5 space-y-3">
+        <h2 className="font-bold text-gray-900">ℹ️ Infos pratiques</h2>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Adresse"><input className={inputCls} {...field('mairieAddress')} /></Field>
+          <Field label="Ville"><input className={inputCls} {...field('mairieCity')} /></Field>
+          <Field label="Téléphone"><input className={inputCls} {...field('mairiePhone')} /></Field>
+          <Field label="Email"><input className={inputCls} {...field('mairieEmail')} /></Field>
         </div>
-      </Field>
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="Facebook (URL)"><input className={inputCls} {...field('facebookUrl')} /></Field>
-        <Field label="IntraMuros (URL)"><input className={inputCls} {...field('intramurosUrl')} /></Field>
-      </div>
-      <div className="flex items-center gap-3">
-        <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">Enregistrer</button>
-        {saved && <span className="text-xs text-green-600 font-medium">Enregistré ✓</span>}
-      </div>
-    </form>
+        <Field label="Horaires d'ouverture">
+          <div className="space-y-1.5">
+            {form.mairieHoraires.map((h, i) => (
+              <div key={h.jour} className="flex items-center gap-2">
+                <span className="w-24 text-xs text-gray-500 flex-shrink-0">{h.jour}</span>
+                <input className={inputCls} value={h.horaires} onChange={e => setHoraire(i, e.target.value)} />
+              </div>
+            ))}
+          </div>
+        </Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Facebook (URL)"><input className={inputCls} {...field('facebookUrl')} /></Field>
+          <Field label="IntraMuros (URL)"><input className={inputCls} {...field('intramurosUrl')} /></Field>
+        </div>
+        <div className="flex items-center gap-3">
+          <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">Enregistrer</button>
+          {saved && <span className="text-xs text-green-600 font-medium">Enregistré ✓</span>}
+        </div>
+      </form>
+
+      <ListEditor<LienUtile>
+        title="🔗 Liens utiles"
+        items={homeLiens}
+        onSave={saveHomeLiens}
+        onReset={resetHomeLiens}
+        confirmLabel="ce lien"
+        makeNew={() => ({ id: newId(), label: '', url: '' })}
+        rowLabel={l => l.label}
+        rowSub={l => l.url}
+        formTitle={isNew => isNew ? 'Nouveau lien' : 'Modifier le lien'}
+        renderForm={(editing, setEditing) => (
+          <>
+            <Field label="Libellé">
+              <input required className={inputCls} value={editing.label} onChange={e => setEditing({ ...editing, label: e.target.value })} />
+            </Field>
+            <Field label="URL">
+              <input required className={inputCls} value={editing.url} onChange={e => setEditing({ ...editing, url: e.target.value })} />
+            </Field>
+          </>
+        )}
+      />
+    </div>
   );
 }
 
@@ -1097,6 +1126,7 @@ function IntercommunaliteAdmin() {
 // --- Démarches (catégories + questions/réponses) ---
 function DemarchesAdminV2() {
   const items = useDemarches();
+  const prefectureLiens = usePrefectureLiens();
 
   const itemsToText = (entries: DemarcheFaqEntry[]) => entries.map(e => `${e.q} :: ${e.a}`).join('\n');
   const textToItems = (text: string): DemarcheFaqEntry[] =>
@@ -1106,42 +1136,66 @@ function DemarchesAdminV2() {
     });
 
   return (
-    <>
-      <p className="text-xs text-gray-400 mb-4">
-        Une question par ligne, au format <code>Question :: Réponse</code>.
-      </p>
-      <ListEditor<DemarcheCategory>
-        title="Catégories de démarches"
-        items={items}
-        onSave={saveDemarches}
-        onReset={resetDemarches}
-        confirmLabel="cette catégorie"
-        makeNew={() => ({ id: newId(), emoji: '📋', title: '', items: [] })}
-        rowLabel={c => c.title}
-        rowSub={c => `${c.items.length} question(s)`}
-        formTitle={isNew => isNew ? 'Nouvelle catégorie' : 'Modifier la catégorie'}
+    <div className="space-y-8">
+      <div>
+        <p className="text-xs text-gray-400 mb-4">
+          Une question par ligne, au format <code>Question :: Réponse</code>.
+        </p>
+        <ListEditor<DemarcheCategory>
+          title="Catégories de démarches"
+          items={items}
+          onSave={saveDemarches}
+          onReset={resetDemarches}
+          confirmLabel="cette catégorie"
+          makeNew={() => ({ id: newId(), emoji: '📋', title: '', items: [] })}
+          rowLabel={c => c.title}
+          rowSub={c => `${c.items.length} question(s)`}
+          formTitle={isNew => isNew ? 'Nouvelle catégorie' : 'Modifier la catégorie'}
+          renderForm={(editing, setEditing) => (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Emoji">
+                  <input className={inputCls} value={editing.emoji} onChange={e => setEditing({ ...editing, emoji: e.target.value })} />
+                </Field>
+                <Field label="Titre">
+                  <input required className={inputCls} value={editing.title} onChange={e => setEditing({ ...editing, title: e.target.value })} />
+                </Field>
+              </div>
+              <Field label="Questions / réponses">
+                <textarea
+                  rows={6}
+                  className={inputCls}
+                  value={itemsToText(editing.items)}
+                  onChange={e => setEditing({ ...editing, items: textToItems(e.target.value) })}
+                />
+              </Field>
+            </>
+          )}
+        />
+      </div>
+
+      <ListEditor<LienUtile>
+        title="🏛️ Services préfectoraux"
+        items={prefectureLiens}
+        onSave={savePrefectureLiens}
+        onReset={resetPrefectureLiens}
+        confirmLabel="ce lien"
+        makeNew={() => ({ id: newId(), label: '', url: '' })}
+        rowLabel={l => l.label}
+        rowSub={l => l.url}
+        formTitle={isNew => isNew ? 'Nouveau lien' : 'Modifier le lien'}
         renderForm={(editing, setEditing) => (
           <>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Emoji">
-                <input className={inputCls} value={editing.emoji} onChange={e => setEditing({ ...editing, emoji: e.target.value })} />
-              </Field>
-              <Field label="Titre">
-                <input required className={inputCls} value={editing.title} onChange={e => setEditing({ ...editing, title: e.target.value })} />
-              </Field>
-            </div>
-            <Field label="Questions / réponses">
-              <textarea
-                rows={6}
-                className={inputCls}
-                value={itemsToText(editing.items)}
-                onChange={e => setEditing({ ...editing, items: textToItems(e.target.value) })}
-              />
+            <Field label="Libellé">
+              <input required className={inputCls} value={editing.label} onChange={e => setEditing({ ...editing, label: e.target.value })} />
+            </Field>
+            <Field label="URL">
+              <input required className={inputCls} value={editing.url} onChange={e => setEditing({ ...editing, url: e.target.value })} />
             </Field>
           </>
         )}
       />
-    </>
+    </div>
   );
 }
 

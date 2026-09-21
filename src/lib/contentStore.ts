@@ -2,12 +2,13 @@ import { useEffect, useReducer } from 'react';
 import type {
   NewsItem, EventItem, Document, Association, Commerce, CouncilMember, PointCarte, SiteSettings,
   GalleryImage, PatrimoineItem, TimelineEvent, EtangInfo, Commission, Deliberation, AffichageItem,
-  DecouvrirVignette, IntercoDelegue, IntercoCompetence, IntercoLien, DemarcheCategory,
+  DecouvrirVignette, IntercoDelegue, IntercoCompetence, IntercoLien, DemarcheCategory, LienUtile,
 } from '../types';
 import {
   NEWS_DATA, EVENTS_DATA, DOCUMENTS_DATA, ASSOCIATIONS_DATA, COMMERCES_DATA, COUNCIL_MEMBERS, POINTS_CARTE,
   GALLERY_DATA, PATRIMOINE_DATA, TIMELINE_DATA, ETANGS_DATA, COMMISSIONS_DATA, DELIBERATIONS_DATA, AFFICHAGE_DATA,
   DECOUVRIR_VIGNETTES_DATA, INTERCO_DELEGUES_DATA, INTERCO_COMPETENCES_DATA, INTERCO_LIENS_DATA, DEMARCHES_DATA,
+  HOME_LIENS_UTILES, PREFECTURE_LIENS,
   COMMUNE_NAME, COMMUNE_SHORT, COMMUNE_POSTAL, COMMUNE_DEPARTMENT, COMMUNE_REGION,
   COMMUNE_POPULATION, COMMUNE_SUPERFICIE, COMMUNE_ALTITUDE, COMMUNE_CODE_INSEE, COMMUNE_COORDS,
   MAIRIE_ADDRESS, MAIRIE_CITY, MAIRIE_PHONE, MAIRIE_EMAIL, MAIRIE_HORAIRES,
@@ -124,6 +125,8 @@ const intercoDeleguesStore = createStore<IntercoDelegue[]>('interco_delegues', I
 const intercoCompetencesStore = createStore<IntercoCompetence[]>('interco_competences', INTERCO_COMPETENCES_DATA);
 const intercoLiensStore = createStore<IntercoLien[]>('interco_liens', INTERCO_LIENS_DATA);
 const demarchesStore = createStore<DemarcheCategory[]>('demarches', DEMARCHES_DATA);
+const homeLiensStore = createStore<LienUtile[]>('home_liens', HOME_LIENS_UTILES);
+const prefectureLiensStore = createStore<LienUtile[]>('prefecture_liens', PREFECTURE_LIENS);
 
 export const useNews = newsStore.use;
 export const getNews = newsStore.get;
@@ -219,6 +222,16 @@ export const useDemarches = demarchesStore.use;
 export const getDemarches = demarchesStore.get;
 export const saveDemarches = demarchesStore.save;
 export const resetDemarches = demarchesStore.reset;
+
+export const useHomeLiens = homeLiensStore.use;
+export const getHomeLiens = homeLiensStore.get;
+export const saveHomeLiens = homeLiensStore.save;
+export const resetHomeLiens = homeLiensStore.reset;
+
+export const usePrefectureLiens = prefectureLiensStore.use;
+export const getPrefectureLiens = prefectureLiensStore.get;
+export const savePrefectureLiens = prefectureLiensStore.save;
+export const resetPrefectureLiens = prefectureLiensStore.reset;
 
 // --- Paramètres du site (objet unique) ---
 

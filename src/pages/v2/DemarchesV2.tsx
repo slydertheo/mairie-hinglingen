@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { ExternalLink, Download } from 'lucide-react';
-import { useDocuments, useDemarches, useSettings } from '../../lib/contentStore';
+import { useDocuments, useDemarches, useSettings, usePrefectureLiens } from '../../lib/contentStore';
 
 export default function DemarchesV2() {
   const [open, setOpen] = useState<number | null>(0);
   const documents = useDocuments();
   const DEMARCHES = useDemarches();
+  const prefectureLiens = usePrefectureLiens();
   const { mairiePhone } = useSettings();
   const formulaires = documents.filter(d => d.category === 'Formulaire');
   const plu = documents.filter(d => d.category === 'Urbanisme');
@@ -70,13 +71,8 @@ export default function DemarchesV2() {
       <div className="bg-white border border-gray-200 rounded-2xl p-6">
         <h2 className="text-lg font-bold text-blue-700 mb-4">🏛️ Services préfectoraux</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {[
-            { label: 'Carte d\'identité & Passeport', url: 'https://www.service-public.fr/particuliers/vosdroits/N360' },
-            { label: 'Carte grise (immatriculation)', url: 'https://immatriculation.ants.gouv.fr' },
-            { label: 'Permis de conduire', url: 'https://permisdeconduire.ants.gouv.fr' },
-            { label: 'Préfecture du Haut-Rhin', url: 'https://www.haut-rhin.gouv.fr' },
-          ].map(l => (
-            <a key={l.label} href={l.url} target="_blank" rel="noopener noreferrer"
+          {prefectureLiens.map(l => (
+            <a key={l.id} href={l.url} target="_blank" rel="noopener noreferrer"
               className="flex items-center justify-between border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700 hover:text-blue-700 hover:border-blue-200 transition-colors">
               {l.label}
               <ExternalLink size={13} aria-hidden="true" />

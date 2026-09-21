@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Calendar, MapPin, Phone, Mail, Clock, FileText, ExternalLink } from 'lucide-react';
-import { useNews, useEvents, useDocuments, useSettings, useDecouvrirVignettes } from '../lib/contentStore';
+import { useNews, useEvents, useDocuments, useSettings, useDecouvrirVignettes, useHomeLiens } from '../lib/contentStore';
 import WeatherWidget from '../components/v2/WeatherWidget';
 import SocialLinks from '../components/v2/SocialLinks';
 
@@ -114,6 +114,7 @@ export default function HomeV2() {
   const MAIRIE_EMAIL = settings.mairieEmail;
   const MAIRIE_HORAIRES = settings.mairieHoraires;
   const vignettes = useDecouvrirVignettes();
+  const homeLiens = useHomeLiens();
   return (
     <>
       {/* Hero – pleine largeur, style Friesen */}
@@ -277,13 +278,8 @@ export default function HomeV2() {
             <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
               <h3 className="font-bold text-gray-900 mb-3">🔗 Liens utiles</h3>
               <ul className="space-y-2 text-sm">
-                {[
-                  { label: 'Service-Public.fr', url: 'https://www.service-public.fr' },
-                  { label: 'Préfecture du Haut-Rhin', url: 'https://www.haut-rhin.gouv.fr' },
-                  { label: 'Région Grand Est', url: 'https://www.grandest.fr' },
-                  { label: 'impots.gouv.fr', url: 'https://www.impots.gouv.fr' },
-                ].map(l => (
-                  <li key={l.url}>
+                {homeLiens.map(l => (
+                  <li key={l.id}>
                     <a href={l.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-blue-600 hover:underline">
                       <ExternalLink size={11} aria-hidden="true" />
                       {l.label}
